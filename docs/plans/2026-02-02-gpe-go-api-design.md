@@ -36,7 +36,9 @@ API REST pública que será consumida por:
 │   ├── funciones_lugares.php
 │   ├── funciones_eventos.php
 │   ├── funciones_favoritos.php
-│   └── funciones_resenas.php
+│   ├── funciones_resenas.php
+│   ├── funciones_fotos.php     # Funciones compartidas de fotos (subir a S3)
+│   └── funciones_reportes.php
 │
 ├── inputs/
 │   ├── index.php
@@ -45,7 +47,11 @@ API REST pública que será consumida por:
 │   ├── inputs_lugares.php
 │   ├── inputs_eventos.php
 │   ├── inputs_favoritos.php
-│   └── inputs_resenas.php
+│   ├── inputs_resenas.php
+│   ├── inputs_fotos_lugares.php
+│   ├── inputs_fotos_eventos.php
+│   ├── inputs_fotos_resenas.php
+│   └── inputs_reportes.php
 │
 └── docs/
     └── plans/
@@ -68,6 +74,8 @@ API REST pública que será consumida por:
 | Email | Encriptado AES-256 (IV fijo para búsqueda) |
 | Código 2FA | Encriptado AES-256 |
 | Protección | Sanitización + detección SQL injection |
+| Almacenamiento fotos | AWS S3 (URL guardada en BD) |
+| Subida de fotos | Base64 en body JSON → API decodifica → sube a S3 |
 | Formato respuestas | JSON: `success`, `data`, `message` |
 
 ---
@@ -175,15 +183,72 @@ CREATE TABLE tb_resenas (
 );
 ```
 
+**tb_fotos_lugares** - Fotos de lugares (dueño del comercio + visitantes)
+```sql
+CREATE TABLE tb_fotos_lugares (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_lugar INT NOT NULL,
+    id_usuario INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_lugar) REFERENCES tb_lugares(id),
+    FOREIGN KEY (id_usuario) REFERENCES tb_usuarios(id)
+);
+```
+
+**tb_fotos_eventos** - Fotos de eventos (moderador/admin)
+```sql
+CREATE TABLE tb_fotos_eventos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_evento INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_evento) REFERENCES tb_eventos(id)
+);
+```
+
+**tb_fotos_resenas** - Fotos de reseñas (autor de la reseña)
+```sql
+CREATE TABLE tb_fotos_resenas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_resena INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_resena) REFERENCES tb_resenas(id)
+);
+```
+
+**tb_reportes** - Reportes de contenido (fotos, reseñas, etc.)
+```sql
+CREATE TABLE tb_reportes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_entidad ENUM('foto_lugar', 'foto_evento', 'foto_resena', 'resena') NOT NULL,
+    id_entidad INT NOT NULL,
+    id_usuario INT NOT NULL,
+    motivo TEXT NOT NULL,
+    estado ENUM('pendiente', 'revisado', 'descartado') DEFAULT 'pendiente',
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_usuario) REFERENCES tb_usuarios(id)
+);
+```
+
 ### 5.3 Relaciones
 
 ```
-tb_usuarios (1) ──── (N) tb_lugares      [dueño del comercio]
-tb_usuarios (1) ──── (N) tb_favoritos    [usuario guarda favoritos]
-tb_usuarios (1) ──── (N) tb_resenas      [usuario deja reseñas]
-tb_categorias (1) ── (N) tb_lugares      [categoría del lugar]
-tb_lugares (1) ───── (N) tb_eventos      [evento en un lugar, opcional]
-tb_lugares (1) ───── (N) tb_resenas      [reseñas del lugar]
+tb_usuarios (1) ──── (N) tb_lugares          [dueño del comercio]
+tb_usuarios (1) ──── (N) tb_favoritos        [usuario guarda favoritos]
+tb_usuarios (1) ──── (N) tb_resenas          [usuario deja reseñas]
+tb_usuarios (1) ──── (N) tb_fotos_lugares    [usuario sube fotos de lugares]
+tb_usuarios (1) ──── (N) tb_reportes         [usuario reporta contenido]
+tb_categorias (1) ── (N) tb_lugares          [categoría del lugar]
+tb_lugares (1) ───── (N) tb_eventos          [evento en un lugar, opcional]
+tb_lugares (1) ───── (N) tb_resenas          [reseñas del lugar]
+tb_lugares (1) ───── (N) tb_fotos_lugares    [fotos del lugar]
+tb_eventos (1) ───── (N) tb_fotos_eventos    [fotos del evento]
+tb_resenas (1) ───── (N) tb_fotos_resenas    [fotos de la reseña]
 ```
 
 ---
@@ -394,6 +459,38 @@ $patrones_peligrosos = [
 | POST | `?modulo=resenas&action=crear` | Crear reseña | Autenticado |
 | DELETE | `?modulo=resenas&action=eliminar&id=X` | Eliminar reseña | Moderador/Admin |
 
+### 9.7 Fotos de Lugares
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| GET | `?modulo=fotos_lugares&action=listar&id_lugar=X` | Listar fotos de un lugar | Público |
+| POST | `?modulo=fotos_lugares&action=subir` | Subir foto (body: id_lugar, imagen base64) | Autenticado |
+| DELETE | `?modulo=fotos_lugares&action=eliminar&id=X` | Eliminar foto | Dueño de la foto/Mod/Admin |
+
+### 9.8 Fotos de Eventos
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| GET | `?modulo=fotos_eventos&action=listar&id_evento=X` | Listar fotos de un evento | Público |
+| POST | `?modulo=fotos_eventos&action=subir` | Subir foto (body: id_evento, imagen base64) | Moderador/Admin |
+| DELETE | `?modulo=fotos_eventos&action=eliminar&id=X` | Eliminar foto | Moderador/Admin |
+
+### 9.9 Fotos de Reseñas
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| GET | `?modulo=fotos_resenas&action=listar&id_resena=X` | Listar fotos de una reseña | Público |
+| POST | `?modulo=fotos_resenas&action=subir` | Subir foto (body: id_resena, imagen base64) | Autor de la reseña |
+| DELETE | `?modulo=fotos_resenas&action=eliminar&id=X` | Eliminar foto | Autor/Mod/Admin |
+
+### 9.10 Reportes
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `?modulo=reportes&action=crear` | Crear reporte (body: tipo_entidad, id_entidad, motivo) | Autenticado |
+| GET | `?modulo=reportes&action=listar` | Listar reportes pendientes | Moderador/Admin |
+| PUT | `?modulo=reportes&action=revisar&id=X` | Marcar reporte como revisado/descartado | Moderador/Admin |
+
 ---
 
 ## 10. Formato de Respuestas
@@ -465,6 +562,11 @@ JWT_SECRET=tu_clave_secreta_aqui
 JWT_EXPIRATION=86400
 
 ENCRYPTION_KEY=tu_clave_de_32_caracteres_aqui
+
+AWS_S3_BUCKET=tu_bucket_aqui
+AWS_S3_REGION=us-east-1
+AWS_ACCESS_KEY_ID=tu_access_key
+AWS_SECRET_ACCESS_KEY=tu_secret_key
 ```
 
 ### 11.2 Entornos
@@ -482,3 +584,9 @@ ENCRYPTION_KEY=tu_clave_de_32_caracteres_aqui
 4. La calificación en reseñas es de 1 a 5 (TINYINT)
 5. Los favoritos pueden ser de lugar O evento, no ambos
 6. Las reseñas se publican inmediatamente, moderadores pueden eliminar después
+7. Las fotos se reciben en base64, se decodifican y suben a S3; la URL resultante se guarda en BD
+8. Fotos de lugares: el dueño del comercio y cualquier usuario autenticado pueden subir
+9. Fotos de eventos: solo moderador/admin
+10. Fotos de reseñas: solo el autor de la reseña
+11. Las fotos se publican inmediatamente, usuarios pueden reportar contenido inapropiado
+12. Los reportes quedan pendientes hasta que un moderador/admin los revise o descarte

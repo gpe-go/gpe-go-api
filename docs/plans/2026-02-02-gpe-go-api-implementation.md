@@ -40,6 +40,11 @@ JWT_SECRET=
 JWT_EXPIRATION=86400
 
 ENCRYPTION_KEY=
+
+AWS_S3_BUCKET=
+AWS_S3_REGION=us-east-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 ```
 
 **Step 3: Crear archivo .env con valores locales**
@@ -56,6 +61,11 @@ JWT_SECRET=gpe_go_api_jwt_secret_key_2026
 JWT_EXPIRATION=86400
 
 ENCRYPTION_KEY=gpe_go_api_encrypt_key_32ch
+
+AWS_S3_BUCKET=gpe-go-api-fotos
+AWS_S3_REGION=us-east-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 ```
 
 **Step 4: Verificar que .env está en .gitignore**
@@ -113,6 +123,12 @@ define('JWT_EXPIRATION', (int)(getenv('JWT_EXPIRATION') ?: 86400));
 
 // Constante de encriptación
 define('ENCRYPTION_KEY', getenv('ENCRYPTION_KEY') ?: '');
+
+// Constantes AWS S3
+define('AWS_S3_BUCKET', getenv('AWS_S3_BUCKET') ?: '');
+define('AWS_S3_REGION', getenv('AWS_S3_REGION') ?: 'us-east-1');
+define('AWS_ACCESS_KEY_ID', getenv('AWS_ACCESS_KEY_ID') ?: '');
+define('AWS_SECRET_ACCESS_KEY', getenv('AWS_SECRET_ACCESS_KEY') ?: '');
 
 // Roles de usuario
 define('ROL_PUBLICO', 'publico');
@@ -600,7 +616,11 @@ $modulos_permitidos = [
     'lugares',
     'eventos',
     'favoritos',
-    'resenas'
+    'resenas',
+    'fotos_lugares',
+    'fotos_eventos',
+    'fotos_resenas',
+    'reportes'
 ];
 
 // Validar módulo
@@ -757,6 +777,61 @@ CREATE TABLE IF NOT EXISTS tb_resenas (
     INDEX idx_usuario (id_usuario),
     INDEX idx_lugar (id_lugar),
     INDEX idx_calificacion (calificacion),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de fotos de lugares
+CREATE TABLE IF NOT EXISTS tb_fotos_lugares (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_lugar INT NOT NULL,
+    id_usuario INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_lugar) REFERENCES tb_lugares(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_usuario) REFERENCES tb_usuarios(id) ON DELETE CASCADE,
+    INDEX idx_lugar (id_lugar),
+    INDEX idx_usuario (id_usuario),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de fotos de eventos
+CREATE TABLE IF NOT EXISTS tb_fotos_eventos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_evento INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_evento) REFERENCES tb_eventos(id) ON DELETE CASCADE,
+    INDEX idx_evento (id_evento),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de fotos de reseñas
+CREATE TABLE IF NOT EXISTS tb_fotos_resenas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_resena INT NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    orden TINYINT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_resena) REFERENCES tb_resenas(id) ON DELETE CASCADE,
+    INDEX idx_resena (id_resena),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de reportes
+CREATE TABLE IF NOT EXISTS tb_reportes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_entidad ENUM('foto_lugar', 'foto_evento', 'foto_resena', 'resena') NOT NULL,
+    id_entidad INT NOT NULL,
+    id_usuario INT NOT NULL,
+    motivo TEXT NOT NULL,
+    estado ENUM('pendiente', 'revisado', 'descartado') DEFAULT 'pendiente',
+    enabled TINYINT DEFAULT 1,
+    FOREIGN KEY (id_usuario) REFERENCES tb_usuarios(id) ON DELETE CASCADE,
+    INDEX idx_entidad (tipo_entidad, id_entidad),
+    INDEX idx_usuario (id_usuario),
+    INDEX idx_estado (estado),
     INDEX idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -2868,7 +2943,836 @@ git commit -m "feat: agregar archivo index para carpeta inputs"
 
 ---
 
-## Task 20: Commit Final y Verificación
+## Task 20: Funciones de Fotos (compartidas + S3)
+
+**Archivos:**
+- Crear: `funciones/funciones_fotos.php`
+
+**Step 1: Crear funciones/funciones_fotos.php**
+
+```php
+<?php
+/**
+ * Funciones compartidas para manejo de fotos
+ * Incluye subida a S3 y operaciones CRUD por entidad
+ */
+
+require_once __DIR__ . '/index.php';
+
+/**
+ * Subir imagen a AWS S3
+ * Recibe base64, decodifica y sube a S3
+ * @param string $base64_imagen Imagen en base64 (puede incluir prefijo data:image/...)
+ * @param string $carpeta Carpeta destino en S3 (lugares, eventos, resenas)
+ * @return string URL pública del archivo en S3
+ */
+function subir_imagen_s3($base64_imagen, $carpeta) {
+    // Remover prefijo data:image si existe
+    if (preg_match('/^data:image\/(\w+);base64,/', $base64_imagen, $matches)) {
+        $extension = $matches[1];
+        $base64_imagen = preg_replace('/^data:image\/\w+;base64,/', '', $base64_imagen);
+    } else {
+        $extension = 'jpg';
+    }
+
+    $imagen_binaria = base64_decode($base64_imagen);
+
+    if ($imagen_binaria === false) {
+        responder_error('IMAGEN_INVALIDA', 'La imagen proporcionada no es válida', 400);
+    }
+
+    // Generar nombre único
+    $nombre_archivo = $carpeta . '/' . uniqid() . '_' . time() . '.' . $extension;
+
+    // Preparar request a S3
+    $bucket = AWS_S3_BUCKET;
+    $region = AWS_S3_REGION;
+    $host = "$bucket.s3.$region.amazonaws.com";
+    $url = "https://$host/$nombre_archivo";
+
+    $fecha = gmdate('Ymd');
+    $fecha_iso = gmdate('Ymd\THis\Z');
+    $content_type = "image/$extension";
+
+    // Hash del contenido
+    $payload_hash = hash('sha256', $imagen_binaria);
+
+    // Headers canónicos
+    $headers = [
+        'content-type' => $content_type,
+        'host' => $host,
+        'x-amz-content-sha256' => $payload_hash,
+        'x-amz-date' => $fecha_iso
+    ];
+
+    $headers_canonicos = '';
+    $signed_headers = '';
+    foreach ($headers as $key => $value) {
+        $headers_canonicos .= "$key:$value\n";
+        $signed_headers .= ($signed_headers ? ';' : '') . $key;
+    }
+
+    // Request canónico
+    $request_canonico = "PUT\n/$nombre_archivo\n\n$headers_canonicos\n$signed_headers\n$payload_hash";
+
+    // String to sign
+    $scope = "$fecha/$region/s3/aws4_request";
+    $string_to_sign = "AWS4-HMAC-SHA256\n$fecha_iso\n$scope\n" . hash('sha256', $request_canonico);
+
+    // Signing key
+    $date_key = hash_hmac('sha256', $fecha, 'AWS4' . AWS_SECRET_ACCESS_KEY, true);
+    $region_key = hash_hmac('sha256', $region, $date_key, true);
+    $service_key = hash_hmac('sha256', 's3', $region_key, true);
+    $signing_key = hash_hmac('sha256', 'aws4_request', $service_key, true);
+
+    $signature = hash_hmac('sha256', $string_to_sign, $signing_key);
+
+    $authorization = "AWS4-HMAC-SHA256 Credential=" . AWS_ACCESS_KEY_ID . "/$scope, SignedHeaders=$signed_headers, Signature=$signature";
+
+    // Ejecutar request
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $imagen_binaria);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: $content_type",
+        "Host: $host",
+        "x-amz-content-sha256: $payload_hash",
+        "x-amz-date: $fecha_iso",
+        "Authorization: $authorization"
+    ]);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($http_code !== 200) {
+        if (APP_ENV === 'development') {
+            responder_error('S3_ERROR', "Error al subir imagen a S3: HTTP $http_code - $response", 500);
+        }
+        responder_error('S3_ERROR', 'Error al subir la imagen', 500);
+    }
+
+    return $url;
+}
+
+// ============================================
+// FOTOS DE LUGARES
+// ============================================
+
+function listar_fotos_lugar($id_lugar) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        SELECT fl.id, fl.url, fl.orden, fl.id_usuario, u.nombre as usuario_nombre
+        FROM tb_fotos_lugares fl
+        JOIN tb_usuarios u ON fl.id_usuario = u.id
+        WHERE fl.id_lugar = ? AND fl.enabled = 1
+        ORDER BY fl.orden ASC, fl.id ASC
+    ");
+    $stmt->execute([$id_lugar]);
+
+    return $stmt->fetchAll();
+}
+
+function crear_foto_lugar($id_lugar, $id_usuario, $url, $orden = 0) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tb_fotos_lugares (id_lugar, id_usuario, url, orden)
+        VALUES (?, ?, ?, ?)
+    ");
+    $stmt->execute([$id_lugar, $id_usuario, $url, $orden]);
+
+    return $pdo->lastInsertId();
+}
+
+function buscar_foto_lugar_por_id($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("SELECT * FROM tb_fotos_lugares WHERE id = ? AND enabled = 1");
+    $stmt->execute([$id]);
+
+    return $stmt->fetch();
+}
+
+function eliminar_foto_lugar($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("UPDATE tb_fotos_lugares SET enabled = 0 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
+
+// ============================================
+// FOTOS DE EVENTOS
+// ============================================
+
+function listar_fotos_evento($id_evento) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        SELECT id, url, orden
+        FROM tb_fotos_eventos
+        WHERE id_evento = ? AND enabled = 1
+        ORDER BY orden ASC, id ASC
+    ");
+    $stmt->execute([$id_evento]);
+
+    return $stmt->fetchAll();
+}
+
+function crear_foto_evento($id_evento, $url, $orden = 0) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tb_fotos_eventos (id_evento, url, orden)
+        VALUES (?, ?, ?)
+    ");
+    $stmt->execute([$id_evento, $url, $orden]);
+
+    return $pdo->lastInsertId();
+}
+
+function buscar_foto_evento_por_id($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("SELECT * FROM tb_fotos_eventos WHERE id = ? AND enabled = 1");
+    $stmt->execute([$id]);
+
+    return $stmt->fetch();
+}
+
+function eliminar_foto_evento($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("UPDATE tb_fotos_eventos SET enabled = 0 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
+
+// ============================================
+// FOTOS DE RESEÑAS
+// ============================================
+
+function listar_fotos_resena($id_resena) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        SELECT id, url, orden
+        FROM tb_fotos_resenas
+        WHERE id_resena = ? AND enabled = 1
+        ORDER BY orden ASC, id ASC
+    ");
+    $stmt->execute([$id_resena]);
+
+    return $stmt->fetchAll();
+}
+
+function crear_foto_resena($id_resena, $url, $orden = 0) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tb_fotos_resenas (id_resena, url, orden)
+        VALUES (?, ?, ?)
+    ");
+    $stmt->execute([$id_resena, $url, $orden]);
+
+    return $pdo->lastInsertId();
+}
+
+function buscar_foto_resena_por_id($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("SELECT * FROM tb_fotos_resenas WHERE id = ? AND enabled = 1");
+    $stmt->execute([$id]);
+
+    return $stmt->fetch();
+}
+
+function eliminar_foto_resena($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("UPDATE tb_fotos_resenas SET enabled = 0 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l funciones/funciones_fotos.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add funciones/funciones_fotos.php
+git commit -m "feat: agregar funciones de fotos con subida a S3"
+```
+
+---
+
+## Task 21: Input de Fotos de Lugares
+
+**Archivos:**
+- Crear: `inputs/inputs_fotos_lugares.php`
+
+**Step 1: Crear inputs/inputs_fotos_lugares.php**
+
+```php
+<?php
+/**
+ * Endpoints del módulo de fotos de lugares
+ */
+
+require_once __DIR__ . '/../bouncer.php';
+require_once __DIR__ . '/../funciones/funciones_fotos.php';
+require_once __DIR__ . '/../funciones/funciones_lugares.php';
+
+$action = $_GET['action'] ?? '';
+$datos = $GLOBALS['INPUT_DATA'];
+
+switch ($action) {
+
+    // ============================================
+    // LISTAR FOTOS DE UN LUGAR (PÚBLICO)
+    // ============================================
+    case 'listar':
+        $id_lugar = $_GET['id_lugar'] ?? null;
+
+        if (!$id_lugar) {
+            responder_error('ID_LUGAR_REQUERIDO', 'Se requiere el ID del lugar', 400);
+        }
+
+        $lugar = buscar_lugar_por_id($id_lugar);
+
+        if (!$lugar || $lugar['estado'] !== 'aprobado') {
+            responder_error('LUGAR_NO_ENCONTRADO', 'Lugar no encontrado', 404);
+        }
+
+        $fotos = listar_fotos_lugar($id_lugar);
+        responder(true, $fotos);
+        break;
+
+    // ============================================
+    // SUBIR FOTO A UN LUGAR (AUTENTICADO)
+    // ============================================
+    case 'subir':
+        $auth = requiere_auth();
+
+        validar_requeridos($datos, ['id_lugar', 'imagen']);
+
+        $lugar = buscar_lugar_por_id($datos['id_lugar']);
+
+        if (!$lugar || $lugar['estado'] !== 'aprobado') {
+            responder_error('LUGAR_NO_ENCONTRADO', 'Lugar no encontrado o no aprobado', 404);
+        }
+
+        $url = subir_imagen_s3($datos['imagen'], 'lugares');
+        $orden = $datos['orden'] ?? 0;
+
+        $id = crear_foto_lugar($datos['id_lugar'], $auth['id'], $url, $orden);
+
+        responder(true, ['id' => $id, 'url' => $url], 'Foto subida correctamente', 201);
+        break;
+
+    // ============================================
+    // ELIMINAR FOTO (DUEÑO/MOD/ADMIN)
+    // ============================================
+    case 'eliminar':
+        $auth = requiere_auth();
+
+        $id = $_GET['id'] ?? null;
+
+        if (!$id) {
+            responder_error('ID_REQUERIDO', 'Se requiere el ID de la foto', 400);
+        }
+
+        $foto = buscar_foto_lugar_por_id($id);
+
+        if (!$foto) {
+            responder_error('FOTO_NO_ENCONTRADA', 'Foto no encontrada', 404);
+        }
+
+        // Verificar permisos: dueño de la foto o moderador/admin
+        $es_dueno = $auth['id'] == $foto['id_usuario'];
+        $es_moderador = in_array($auth['rol'], [ROL_MODERADOR, ROL_ADMIN]);
+
+        if (!$es_dueno && !$es_moderador) {
+            responder_error('FORBIDDEN', 'No tienes permisos para eliminar esta foto', 403);
+        }
+
+        eliminar_foto_lugar($id);
+
+        responder(true, null, 'Foto eliminada');
+        break;
+
+    default:
+        responder_error('ACTION_INVALIDO', 'La acción especificada no es válida', 400);
+        break;
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l inputs/inputs_fotos_lugares.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add inputs/inputs_fotos_lugares.php
+git commit -m "feat: agregar endpoints de fotos de lugares"
+```
+
+---
+
+## Task 22: Input de Fotos de Eventos
+
+**Archivos:**
+- Crear: `inputs/inputs_fotos_eventos.php`
+
+**Step 1: Crear inputs/inputs_fotos_eventos.php**
+
+```php
+<?php
+/**
+ * Endpoints del módulo de fotos de eventos
+ */
+
+require_once __DIR__ . '/../bouncer.php';
+require_once __DIR__ . '/../funciones/funciones_fotos.php';
+require_once __DIR__ . '/../funciones/funciones_eventos.php';
+
+$action = $_GET['action'] ?? '';
+$datos = $GLOBALS['INPUT_DATA'];
+
+switch ($action) {
+
+    // ============================================
+    // LISTAR FOTOS DE UN EVENTO (PÚBLICO)
+    // ============================================
+    case 'listar':
+        $id_evento = $_GET['id_evento'] ?? null;
+
+        if (!$id_evento) {
+            responder_error('ID_EVENTO_REQUERIDO', 'Se requiere el ID del evento', 400);
+        }
+
+        $evento = buscar_evento_por_id($id_evento);
+
+        if (!$evento) {
+            responder_error('EVENTO_NO_ENCONTRADO', 'Evento no encontrado', 404);
+        }
+
+        $fotos = listar_fotos_evento($id_evento);
+        responder(true, $fotos);
+        break;
+
+    // ============================================
+    // SUBIR FOTO A UN EVENTO (MODERADOR/ADMIN)
+    // ============================================
+    case 'subir':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        validar_requeridos($datos, ['id_evento', 'imagen']);
+
+        $evento = buscar_evento_por_id($datos['id_evento']);
+
+        if (!$evento) {
+            responder_error('EVENTO_NO_ENCONTRADO', 'Evento no encontrado', 404);
+        }
+
+        $url = subir_imagen_s3($datos['imagen'], 'eventos');
+        $orden = $datos['orden'] ?? 0;
+
+        $id = crear_foto_evento($datos['id_evento'], $url, $orden);
+
+        responder(true, ['id' => $id, 'url' => $url], 'Foto subida correctamente', 201);
+        break;
+
+    // ============================================
+    // ELIMINAR FOTO (MODERADOR/ADMIN)
+    // ============================================
+    case 'eliminar':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $id = $_GET['id'] ?? null;
+
+        if (!$id) {
+            responder_error('ID_REQUERIDO', 'Se requiere el ID de la foto', 400);
+        }
+
+        $foto = buscar_foto_evento_por_id($id);
+
+        if (!$foto) {
+            responder_error('FOTO_NO_ENCONTRADA', 'Foto no encontrada', 404);
+        }
+
+        eliminar_foto_evento($id);
+
+        responder(true, null, 'Foto eliminada');
+        break;
+
+    default:
+        responder_error('ACTION_INVALIDO', 'La acción especificada no es válida', 400);
+        break;
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l inputs/inputs_fotos_eventos.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add inputs/inputs_fotos_eventos.php
+git commit -m "feat: agregar endpoints de fotos de eventos"
+```
+
+---
+
+## Task 23: Input de Fotos de Reseñas
+
+**Archivos:**
+- Crear: `inputs/inputs_fotos_resenas.php`
+
+**Step 1: Crear inputs/inputs_fotos_resenas.php**
+
+```php
+<?php
+/**
+ * Endpoints del módulo de fotos de reseñas
+ */
+
+require_once __DIR__ . '/../bouncer.php';
+require_once __DIR__ . '/../funciones/funciones_fotos.php';
+require_once __DIR__ . '/../funciones/funciones_resenas.php';
+
+$action = $_GET['action'] ?? '';
+$datos = $GLOBALS['INPUT_DATA'];
+
+switch ($action) {
+
+    // ============================================
+    // LISTAR FOTOS DE UNA RESEÑA (PÚBLICO)
+    // ============================================
+    case 'listar':
+        $id_resena = $_GET['id_resena'] ?? null;
+
+        if (!$id_resena) {
+            responder_error('ID_RESENA_REQUERIDO', 'Se requiere el ID de la reseña', 400);
+        }
+
+        $resena = buscar_resena_por_id($id_resena);
+
+        if (!$resena) {
+            responder_error('RESENA_NO_ENCONTRADA', 'Reseña no encontrada', 404);
+        }
+
+        $fotos = listar_fotos_resena($id_resena);
+        responder(true, $fotos);
+        break;
+
+    // ============================================
+    // SUBIR FOTO A UNA RESEÑA (AUTOR)
+    // ============================================
+    case 'subir':
+        $auth = requiere_auth();
+
+        validar_requeridos($datos, ['id_resena', 'imagen']);
+
+        $resena = buscar_resena_por_id($datos['id_resena']);
+
+        if (!$resena) {
+            responder_error('RESENA_NO_ENCONTRADA', 'Reseña no encontrada', 404);
+        }
+
+        // Solo el autor puede subir fotos a su reseña
+        if ($resena['id_usuario'] != $auth['id']) {
+            responder_error('FORBIDDEN', 'Solo puedes subir fotos a tus propias reseñas', 403);
+        }
+
+        $url = subir_imagen_s3($datos['imagen'], 'resenas');
+        $orden = $datos['orden'] ?? 0;
+
+        $id = crear_foto_resena($datos['id_resena'], $url, $orden);
+
+        responder(true, ['id' => $id, 'url' => $url], 'Foto subida correctamente', 201);
+        break;
+
+    // ============================================
+    // ELIMINAR FOTO (AUTOR/MOD/ADMIN)
+    // ============================================
+    case 'eliminar':
+        $auth = requiere_auth();
+
+        $id = $_GET['id'] ?? null;
+
+        if (!$id) {
+            responder_error('ID_REQUERIDO', 'Se requiere el ID de la foto', 400);
+        }
+
+        $foto = buscar_foto_resena_por_id($id);
+
+        if (!$foto) {
+            responder_error('FOTO_NO_ENCONTRADA', 'Foto no encontrada', 404);
+        }
+
+        // Verificar permisos: autor de la reseña o moderador/admin
+        $resena = buscar_resena_por_id($foto['id_resena']);
+        $es_autor = $resena && $resena['id_usuario'] == $auth['id'];
+        $es_moderador = in_array($auth['rol'], [ROL_MODERADOR, ROL_ADMIN]);
+
+        if (!$es_autor && !$es_moderador) {
+            responder_error('FORBIDDEN', 'No tienes permisos para eliminar esta foto', 403);
+        }
+
+        eliminar_foto_resena($id);
+
+        responder(true, null, 'Foto eliminada');
+        break;
+
+    default:
+        responder_error('ACTION_INVALIDO', 'La acción especificada no es válida', 400);
+        break;
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l inputs/inputs_fotos_resenas.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add inputs/inputs_fotos_resenas.php
+git commit -m "feat: agregar endpoints de fotos de reseñas"
+```
+
+---
+
+## Task 24: Funciones de Reportes
+
+**Archivos:**
+- Crear: `funciones/funciones_reportes.php`
+
+**Step 1: Crear funciones/funciones_reportes.php**
+
+```php
+<?php
+/**
+ * Funciones para el módulo de reportes
+ */
+
+require_once __DIR__ . '/index.php';
+
+/**
+ * Crear reporte
+ */
+function crear_reporte($id_usuario, $tipo_entidad, $id_entidad, $motivo) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tb_reportes (tipo_entidad, id_entidad, id_usuario, motivo)
+        VALUES (?, ?, ?, ?)
+    ");
+
+    $stmt->execute([$tipo_entidad, $id_entidad, $id_usuario, $motivo]);
+
+    return $pdo->lastInsertId();
+}
+
+/**
+ * Listar reportes pendientes
+ */
+function listar_reportes($estado = 'pendiente', $pagina = 1, $por_pagina = 10) {
+    $pdo = conectarBD();
+
+    $offset = ($pagina - 1) * $por_pagina;
+
+    // Contar total
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_reportes WHERE estado = ? AND enabled = 1");
+    $stmt->execute([$estado]);
+    $total = $stmt->fetchColumn();
+
+    // Obtener reportes
+    $stmt = $pdo->prepare("
+        SELECT r.*, u.nombre as reportado_por
+        FROM tb_reportes r
+        JOIN tb_usuarios u ON r.id_usuario = u.id
+        WHERE r.estado = ? AND r.enabled = 1
+        ORDER BY r.id DESC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->execute([$estado, $por_pagina, $offset]);
+
+    return [
+        'reportes' => $stmt->fetchAll(),
+        'total' => $total,
+        'pagina' => $pagina,
+        'por_pagina' => $por_pagina
+    ];
+}
+
+/**
+ * Buscar reporte por ID
+ */
+function buscar_reporte_por_id($id) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("SELECT * FROM tb_reportes WHERE id = ? AND enabled = 1");
+    $stmt->execute([$id]);
+
+    return $stmt->fetch();
+}
+
+/**
+ * Cambiar estado de reporte
+ */
+function cambiar_estado_reporte($id, $estado) {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->prepare("UPDATE tb_reportes SET estado = ? WHERE id = ? AND enabled = 1");
+    return $stmt->execute([$estado, $id]);
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l funciones/funciones_reportes.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add funciones/funciones_reportes.php
+git commit -m "feat: agregar funciones del módulo reportes"
+```
+
+---
+
+## Task 25: Input de Reportes
+
+**Archivos:**
+- Crear: `inputs/inputs_reportes.php`
+
+**Step 1: Crear inputs/inputs_reportes.php**
+
+```php
+<?php
+/**
+ * Endpoints del módulo de reportes
+ */
+
+require_once __DIR__ . '/../bouncer.php';
+require_once __DIR__ . '/../funciones/funciones_reportes.php';
+
+$action = $_GET['action'] ?? '';
+$datos = $GLOBALS['INPUT_DATA'];
+
+switch ($action) {
+
+    // ============================================
+    // CREAR REPORTE (AUTENTICADO)
+    // ============================================
+    case 'crear':
+        $auth = requiere_auth();
+
+        validar_requeridos($datos, ['tipo_entidad', 'id_entidad', 'motivo']);
+
+        $tipos_validos = ['foto_lugar', 'foto_evento', 'foto_resena', 'resena'];
+
+        if (!in_array($datos['tipo_entidad'], $tipos_validos)) {
+            responder_error('TIPO_INVALIDO', 'El tipo de entidad no es válido', 400);
+        }
+
+        $id = crear_reporte($auth['id'], $datos['tipo_entidad'], $datos['id_entidad'], $datos['motivo']);
+
+        responder(true, ['id' => $id], 'Reporte enviado correctamente', 201);
+        break;
+
+    // ============================================
+    // LISTAR REPORTES (MODERADOR/ADMIN)
+    // ============================================
+    case 'listar':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $estado = $_GET['estado'] ?? 'pendiente';
+        $pagina = (int)($_GET['pagina'] ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+
+        $resultado = listar_reportes($estado, $pagina, $por_pagina);
+
+        responder(true, $resultado['reportes'], '', 200);
+        break;
+
+    // ============================================
+    // REVISAR REPORTE (MODERADOR/ADMIN)
+    // ============================================
+    case 'revisar':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $id = $_GET['id'] ?? null;
+
+        if (!$id) {
+            responder_error('ID_REQUERIDO', 'Se requiere el ID del reporte', 400);
+        }
+
+        validar_requeridos($datos, ['estado']);
+
+        $estados_validos = ['revisado', 'descartado'];
+
+        if (!in_array($datos['estado'], $estados_validos)) {
+            responder_error('ESTADO_INVALIDO', 'El estado debe ser "revisado" o "descartado"', 400);
+        }
+
+        $reporte = buscar_reporte_por_id($id);
+
+        if (!$reporte) {
+            responder_error('REPORTE_NO_ENCONTRADO', 'Reporte no encontrado', 404);
+        }
+
+        cambiar_estado_reporte($id, $datos['estado']);
+
+        $reporte = buscar_reporte_por_id($id);
+        responder(true, $reporte, 'Reporte actualizado');
+        break;
+
+    default:
+        responder_error('ACTION_INVALIDO', 'La acción especificada no es válida', 400);
+        break;
+}
+```
+
+**Step 2: Verificar sintaxis**
+
+```bash
+php -l inputs/inputs_reportes.php
+```
+Esperado: `No syntax errors detected`
+
+**Step 3: Commit**
+
+```bash
+git add inputs/inputs_reportes.php
+git commit -m "feat: agregar endpoints del módulo reportes"
+```
+
+---
+
+## Task 26: Commit Final y Verificación
 
 **Step 1: Verificar todos los archivos**
 
@@ -2924,7 +3828,13 @@ git log --oneline
 | 17 | Funciones Reseñas | `funciones/funciones_resenas.php` |
 | 18 | Input Reseñas | `inputs/inputs_resenas.php` |
 | 19 | Index carpetas | `inputs/index.php` |
-| 20 | Verificación final | - |
+| 20 | Funciones Fotos (S3) | `funciones/funciones_fotos.php` |
+| 21 | Input Fotos Lugares | `inputs/inputs_fotos_lugares.php` |
+| 22 | Input Fotos Eventos | `inputs/inputs_fotos_eventos.php` |
+| 23 | Input Fotos Reseñas | `inputs/inputs_fotos_resenas.php` |
+| 24 | Funciones Reportes | `funciones/funciones_reportes.php` |
+| 25 | Input Reportes | `inputs/inputs_reportes.php` |
+| 26 | Verificación final | - |
 
 ---
 
@@ -2940,7 +3850,12 @@ Después de completar todas las tareas:
 2. **Actualizar email del admin:**
    Ejecutar script PHP para encriptar el email del admin inicial.
 
-3. **Probar endpoints:**
+3. **Configurar bucket S3:**
+   - Crear bucket en AWS S3
+   - Configurar política de acceso público para lectura
+   - Agregar credenciales al `.env`
+
+4. **Probar endpoints:**
    ```bash
    # Listar categorías (público)
    curl http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=listar
@@ -2949,4 +3864,10 @@ Después de completar todas las tareas:
    curl -X POST http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=registro \
      -H "Content-Type: application/json" \
      -d '{"nombre":"Test User","email":"test@example.com"}'
+
+   # Subir foto a un lugar (autenticado)
+   curl -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_lugares&action=subir" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer TOKEN" \
+     -d '{"id_lugar":1,"imagen":"data:image/jpeg;base64,/9j/4AAQ..."}'
    ```
