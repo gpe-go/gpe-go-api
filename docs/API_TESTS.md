@@ -1,6 +1,6 @@
 # GPE Go API - Documentación de Pruebas
 
-> Pruebas realizadas el 2026-02-19 sobre localhost/XAMPP
+> Pruebas ejecutadas el 2026-02-19 sobre localhost/XAMPP
 > Base URL: `http://localhost/gpe_go_api/inputs.php`
 
 ## Índice
@@ -57,7 +57,9 @@ get_token() {
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=listar"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Lista de las 7 categorías seed ordenadas por nombre.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -79,7 +81,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=listar"
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=ver&id=1"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Detalle de la categoría Restaurantes.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -103,7 +107,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
   -d '{"nombre":"Deportes","descripcion":"Gimnasios, canchas y actividades deportivas"}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Categoría creada con ID autoincremental.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -126,7 +132,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
   -d '{"nombre":"Deportes y Fitness","descripcion":"Gimnasios, canchas, yoga y más"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Campos actualizados.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -147,7 +155,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Soft delete (enabled = 0).
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -166,7 +176,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
   -d '{"nombre":"Hack"}'
 ```
 
-**Respuesta esperada:** `403 Forbidden`
+**Respuesta esperada:** `403 Forbidden` - Solo admin puede crear categorías.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -189,7 +201,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=r
   -d '{"nombre":"Juan Pérez","email":"juan@test.com"}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Usuario con rol `publico` por defecto.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -211,7 +225,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=r
   -d '{"nombre":"Juan Pérez","email":"juan@test.com"}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Email ya registrado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -230,7 +246,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=r
   -d '{"nombre":"Solo Nombre"}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Indica campo faltante.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -249,7 +267,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=r
   -d '{"nombre":"Hacker","email":"hacker@evil.com","rol":"admin"}'
 ```
 
-**Respuesta esperada:** `201 Created` (rol forzado a `publico`)
+**Respuesta esperada:** `201 Created` - El campo `rol` se ignora y se fuerza `publico`.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -271,7 +291,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=s
   -d '{"email":"juan@test.com"}'
 ```
 
-**Respuesta esperada:** `200 OK` (en desarrollo retorna el código)
+**Respuesta esperada:** `200 OK` - En desarrollo retorna el código de 6 dígitos.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -290,7 +312,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=v
   -d '{"email":"juan@test.com","codigo":"000000"}'
 ```
 
-**Respuesta esperada:** `401 Unauthorized`
+**Respuesta esperada:** `401 Unauthorized` - Código no coincide.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -309,12 +333,14 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=v
   -d '{"email":"juan@test.com","codigo":"632246"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Token JWT + datos del usuario.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwiZW1haWwiOiJqdWFuQHRlc3QuY29tIiwicm9sIjoicHVibGljbyIsImlhdCI6MTc3MTU2Mjg0NywiZXhwIjoxNzcxNjQ5MjQ3fQ.nuErI9O45X-5SBMgeBz8vo5Lj9oXBBA2JBY_CEFcuM4",
         "usuario": {
             "id": 4,
             "nombre": "Juan Pérez",
@@ -339,7 +365,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=perfil" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Datos del usuario autenticado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -361,7 +389,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=e
   -d '{"nombre":"Juan Pérez García"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Nombre actualizado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -384,7 +414,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=e
   -d '{}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - No hay datos para actualizar.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -401,7 +433,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=e
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=perfil"
 ```
 
-**Respuesta esperada:** `401 Unauthorized`
+**Respuesta esperada:** `401 Unauthorized` - Requiere JWT.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -425,7 +459,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=listar" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Lista paginada con emails desencriptados.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -433,7 +469,8 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=listar" \
         "usuarios": [
             {"id": 6, "nombre": "Negocio Test", "email": "comercio@test.com", "rol": "comercio"},
             {"id": 5, "nombre": "Admin Test", "email": "admin@test.com", "rol": "admin"},
-            {"id": 4, "nombre": "Juan Pérez García", "email": "juan@test.com", "rol": "publico"}
+            {"id": 4, "nombre": "Juan Pérez García", "email": "juan@test.com", "rol": "publico"},
+            {"id": 1, "nombre": "Administrador", "email": false, "rol": "admin"}
         ],
         "total": 4,
         "pagina": 1,
@@ -441,6 +478,8 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=listar" \
     }
 }
 ```
+
+> **Nota:** El usuario id=1 muestra `email: false` porque su email seed (`ENCRYPTED_EMAIL_PLACEHOLDER`) no es desencriptable. Es comportamiento esperado.
 
 ### 5.2 Cambiar rol de usuario (admin)
 
@@ -451,7 +490,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=c
   -d '{"rol":"moderador"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Rol cambiado a moderador.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -474,7 +515,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=c
   -d '{"rol":"superadmin"}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Rol no válido.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -500,7 +543,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=re
   -d '{"nombre":"Tacos El Güero","descripcion":"Los mejores tacos de Guadalupe","direccion":"Av. Benito Juárez 123","telefono":"8112345678","id_categoria":1}'
 ```
 
-**Respuesta esperada:** `201 Created` (estado: pendiente)
+**Respuesta esperada:** `201 Created` - Estado `pendiente`, esperando aprobación.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -528,7 +573,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=re
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar"
 ```
 
-**Respuesta esperada (sin lugares aprobados):** `200 OK`
+**Respuesta esperada:** `200 OK` - Lista vacía (todo está pendiente).
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -550,7 +597,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar_pen
   -H "Authorization: Bearer $MOD_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - 2 lugares pendientes de aprobación.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -559,13 +608,25 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar_pen
             {
                 "id": 1,
                 "nombre": "Tacos El Güero",
+                "descripcion": "Los mejores tacos de Guadalupe",
+                "direccion": "Av. Benito Juárez 123",
+                "telefono": "8112345678",
+                "id_categoria": 1,
+                "id_usuario": 6,
                 "estado": "pendiente",
+                "enabled": 1,
                 "categoria_nombre": "Restaurantes"
             },
             {
                 "id": 2,
                 "nombre": "Hotel Guadalupe Inn",
+                "descripcion": "Hotel céntrico con todas las comodidades",
+                "direccion": "Calle Hidalgo 456",
+                "telefono": "8198765432",
+                "id_categoria": 2,
+                "id_usuario": 6,
                 "estado": "pendiente",
+                "enabled": 1,
                 "categoria_nombre": "Hoteles"
             }
         ],
@@ -583,14 +644,22 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ap
   -H "Authorization: Bearer $MOD_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Estado cambiado a `aprobado`.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "id": 1,
         "nombre": "Tacos El Güero",
+        "descripcion": "Los mejores tacos de Guadalupe",
+        "direccion": "Av. Benito Juárez 123",
+        "telefono": "8112345678",
+        "id_categoria": 1,
+        "id_usuario": 6,
         "estado": "aprobado",
+        "enabled": 1,
         "categoria_nombre": "Restaurantes"
     },
     "message": "Lugar aprobado"
@@ -604,14 +673,23 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=re
   -H "Authorization: Bearer $MOD_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Estado cambiado a `rechazado`.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "id": 3,
         "nombre": "Negocio Sospechoso",
-        "estado": "rechazado"
+        "descripcion": "Test",
+        "direccion": null,
+        "telefono": null,
+        "id_categoria": 6,
+        "id_usuario": 6,
+        "estado": "rechazado",
+        "enabled": 1,
+        "categoria_nombre": "Servicios"
     },
     "message": "Lugar rechazado"
 }
@@ -623,7 +701,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=re
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ver&id=1"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Detalle completo del lugar aprobado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -648,13 +728,26 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ver&id=1"
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar&id_categoria=1"
 ```
 
-**Respuesta esperada:** `200 OK` (solo restaurantes)
+**Respuesta esperada:** `200 OK` - Solo lugares de la categoría Restaurantes.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "lugares": [
-            {"id": 1, "nombre": "Tacos El Güero", "categoria_nombre": "Restaurantes"}
+            {
+                "id": 1,
+                "nombre": "Tacos El Güero",
+                "descripcion": "Los mejores tacos de Guadalupe",
+                "direccion": "Av. Benito Juárez 123",
+                "telefono": "8112345678",
+                "id_categoria": 1,
+                "id_usuario": 6,
+                "estado": "aprobado",
+                "enabled": 1,
+                "categoria_nombre": "Restaurantes"
+            }
         ],
         "total": 1,
         "pagina": 1,
@@ -669,13 +762,26 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar&id_
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=listar&busqueda=tacos"
 ```
 
-**Respuesta esperada:** `200 OK` (coincidencias)
+**Respuesta esperada:** `200 OK` - Coincidencias por nombre o descripción.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "lugares": [
-            {"id": 1, "nombre": "Tacos El Güero"}
+            {
+                "id": 1,
+                "nombre": "Tacos El Güero",
+                "descripcion": "Los mejores tacos de Guadalupe",
+                "direccion": "Av. Benito Juárez 123",
+                "telefono": "8112345678",
+                "id_categoria": 1,
+                "id_usuario": 6,
+                "estado": "aprobado",
+                "enabled": 1,
+                "categoria_nombre": "Restaurantes"
+            }
         ],
         "total": 1,
         "pagina": 1,
@@ -693,13 +799,37 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=mis_lugare
   -H "Authorization: Bearer $COMERCIO_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK` (todos los lugares del usuario, sin importar estado)
+**Respuesta esperada:** `200 OK` - Todos los lugares del usuario sin importar estado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": [
-        {"id": 2, "nombre": "Hotel Guadalupe Inn", "estado": "aprobado"},
-        {"id": 1, "nombre": "Tacos El Güero", "estado": "aprobado"}
+        {
+            "id": 2,
+            "nombre": "Hotel Guadalupe Inn",
+            "descripcion": "Hotel céntrico con todas las comodidades",
+            "direccion": "Calle Hidalgo 456",
+            "telefono": "8198765432",
+            "id_categoria": 2,
+            "id_usuario": 6,
+            "estado": "aprobado",
+            "enabled": 1,
+            "categoria_nombre": "Hoteles"
+        },
+        {
+            "id": 1,
+            "nombre": "Tacos El Güero",
+            "descripcion": "Los mejores tacos de Guadalupe",
+            "direccion": "Av. Benito Juárez 123",
+            "telefono": "8112345678",
+            "id_categoria": 1,
+            "id_usuario": 6,
+            "estado": "aprobado",
+            "enabled": 1,
+            "categoria_nombre": "Restaurantes"
+        }
     ]
 }
 ```
@@ -713,7 +843,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ed
   -d '{"descripcion":"Los mejores tacos de birria en todo Guadalupe, N.L.","telefono":"8111112222"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Descripción y teléfono actualizados.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -721,7 +853,13 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ed
         "id": 1,
         "nombre": "Tacos El Güero",
         "descripcion": "Los mejores tacos de birria en todo Guadalupe, N.L.",
-        "telefono": "8111112222"
+        "direccion": "Av. Benito Juárez 123",
+        "telefono": "8111112222",
+        "id_categoria": 1,
+        "id_usuario": 6,
+        "estado": "aprobado",
+        "enabled": 1,
+        "categoria_nombre": "Restaurantes"
     },
     "message": "Lugar actualizado"
 }
@@ -736,7 +874,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=el
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Borrado lógico (enabled = 0).
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -744,11 +884,15 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=el
 }
 ```
 
-**Verificar que ya no es visible:**
+### 6.12 Verificar que lugar eliminado no es visible
+
 ```bash
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=lugares&action=ver&id=3"
 ```
 
+**Respuesta esperada:** `404 Not Found` - El lugar ya no existe.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -774,7 +918,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=cr
   -d '{"titulo":"Festival Guadalupano 2026","descripcion":"Gran festival con música, comida y cultura","fecha_inicio":"2026-06-10","fecha_fin":"2026-06-15","tipo":"evento","id_lugar":1}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Evento vinculado a lugar.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -802,17 +948,21 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=cr
   -d '{"titulo":"Guadalupe se prepara para el Mundial 2026","descripcion":"La ciudad lanza programa de mejoramiento urbano","fecha_inicio":"2026-02-19","tipo":"noticia"}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Noticia sin lugar asociado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "id": 2,
         "titulo": "Guadalupe se prepara para el Mundial 2026",
+        "descripcion": "La ciudad lanza programa de mejoramiento urbano",
         "fecha_inicio": "2026-02-19",
         "fecha_fin": null,
         "tipo": "noticia",
         "id_lugar": null,
+        "enabled": 1,
         "lugar_nombre": null
     },
     "message": "Evento creado correctamente"
@@ -825,14 +975,36 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=cr
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=listar"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Eventos y noticias ordenados por fecha.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "eventos": [
-            {"id": 2, "titulo": "Guadalupe se prepara para el Mundial 2026", "tipo": "noticia"},
-            {"id": 1, "titulo": "Festival Guadalupano 2026", "tipo": "evento"}
+            {
+                "id": 2,
+                "titulo": "Guadalupe se prepara para el Mundial 2026",
+                "descripcion": "La ciudad lanza programa de mejoramiento urbano",
+                "fecha_inicio": "2026-02-19",
+                "fecha_fin": null,
+                "tipo": "noticia",
+                "id_lugar": null,
+                "enabled": 1,
+                "lugar_nombre": null
+            },
+            {
+                "id": 1,
+                "titulo": "Festival Guadalupano 2026",
+                "descripcion": "Gran festival con música, comida y cultura",
+                "fecha_inicio": "2026-06-10",
+                "fecha_fin": "2026-06-15",
+                "tipo": "evento",
+                "id_lugar": 1,
+                "enabled": 1,
+                "lugar_nombre": "Tacos El Güero"
+            }
         ],
         "total": 2,
         "pagina": 1,
@@ -847,13 +1019,25 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=listar"
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=listar&tipo=noticia"
 ```
 
-**Respuesta esperada:** `200 OK` (solo noticias)
+**Respuesta esperada:** `200 OK` - Solo noticias.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "eventos": [
-            {"id": 2, "titulo": "Guadalupe se prepara para el Mundial 2026", "tipo": "noticia"}
+            {
+                "id": 2,
+                "titulo": "Guadalupe se prepara para el Mundial 2026",
+                "descripcion": "La ciudad lanza programa de mejoramiento urbano",
+                "fecha_inicio": "2026-02-19",
+                "fecha_fin": null,
+                "tipo": "noticia",
+                "id_lugar": null,
+                "enabled": 1,
+                "lugar_nombre": null
+            }
         ],
         "total": 1,
         "pagina": 1,
@@ -868,7 +1052,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=listar&tip
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=ver&id=1"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Detalle completo con nombre del lugar.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -895,14 +1081,22 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=ed
   -d '{"titulo":"Gran Festival Guadalupano 2026","descripcion":"El evento mas grande del municipio"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Título y descripción actualizados.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "data": {
         "id": 1,
         "titulo": "Gran Festival Guadalupano 2026",
-        "descripcion": "El evento mas grande del municipio"
+        "descripcion": "El evento mas grande del municipio",
+        "fecha_inicio": "2026-06-10",
+        "fecha_fin": "2026-06-15",
+        "tipo": "evento",
+        "id_lugar": 1,
+        "enabled": 1,
+        "lugar_nombre": "Tacos El Güero"
     },
     "message": "Evento actualizado"
 }
@@ -915,7 +1109,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=eventos&action=el
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Borrado lógico.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -938,7 +1134,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=favoritos&action=
   -d '{"id_lugar":1}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Favorito creado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -956,7 +1154,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=favoritos&action=
   -d '{"id_evento":1}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Favorito de tipo evento.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -974,7 +1174,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=favoritos&action=
   -d '{"id_lugar":1}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Ya está en favoritos.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -992,7 +1194,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=favoritos&action=listar" 
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK` (combina lugares y eventos)
+**Respuesta esperada:** `200 OK` - Combina lugares y eventos vía UNION ALL.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1026,7 +1230,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=favoritos&action=
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Favorito eliminado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1049,7 +1255,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=resenas&action=cr
   -d '{"id_lugar":1,"calificacion":5,"comentario":"Excelentes tacos de birria"}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Reseña con calificación 1-5.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1077,7 +1285,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=resenas&action=cr
   -d '{"id_lugar":1,"calificacion":3,"comentario":"Otra vez"}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Solo una reseña por usuario por lugar.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1096,7 +1306,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=resenas&action=cr
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=resenas&action=listar&id_lugar=1"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Reseñas paginadas + estadísticas.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1128,11 +1340,30 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=resenas&action=el
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Borrado lógico.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
     "message": "Reseña eliminada"
+}
+```
+
+**Verificación - listar reseñas después de eliminar:**
+
+**Resultado obtenido:** `PASS`
+```json
+{
+    "success": true,
+    "data": {
+        "resenas": [],
+        "total": 0,
+        "pagina": 1,
+        "por_pagina": 10,
+        "promedio": null,
+        "total_resenas": 0
+    }
 }
 ```
 
@@ -1151,7 +1382,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=c
   -d '{"tipo_entidad":"resena","id_entidad":1,"motivo":"Contenido inapropiado"}'
 ```
 
-**Respuesta esperada:** `201 Created`
+**Respuesta esperada:** `201 Created` - Reporte con estado `pendiente`.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1169,7 +1402,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=c
   -d '{"tipo_entidad":"resena","id_entidad":1,"motivo":"Spam"}'
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - No se puede duplicar reporte pendiente.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1189,7 +1424,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=listar" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Reportes paginados con nombre del reportante.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1222,7 +1459,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=r
   -d '{"estado":"revisado"}'
 ```
 
-**Respuesta esperada:** `200 OK`
+**Respuesta esperada:** `200 OK` - Estado cambiado a `revisado`.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": true,
@@ -1230,8 +1469,10 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=r
         "id": 1,
         "tipo_entidad": "resena",
         "id_entidad": 1,
+        "id_usuario": 4,
         "motivo": "Contenido inapropiado",
-        "estado": "revisado"
+        "estado": "revisado",
+        "enabled": 1
     },
     "message": "Reporte actualizado"
 }
@@ -1243,6 +1484,7 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=reportes&action=r
 
 > Los endpoints de fotos requieren credenciales AWS S3 configuradas en `.env`.
 > La estructura de los endpoints es idéntica para los 3 módulos de fotos.
+> **Estado:** No probados en localhost (requieren S3). Documentados como referencia.
 
 ### 11.1 Subir foto de lugar
 
@@ -1268,11 +1510,15 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_lugares&act
 }
 ```
 
+**Resultado obtenido:** `PENDIENTE` - Requiere credenciales AWS S3.
+
 ### 11.2 Listar fotos de un lugar
 
 ```bash
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=fotos_lugares&action=listar&id_lugar=1"
 ```
+
+**Resultado obtenido:** `PENDIENTE` - Requiere credenciales AWS S3.
 
 ### 11.3 Eliminar foto de lugar
 
@@ -1280,6 +1526,8 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=fotos_lugares&action=list
 curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_lugares&action=eliminar&id=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+**Resultado obtenido:** `PENDIENTE` - Requiere credenciales AWS S3.
 
 ### 11.4 Fotos de eventos
 
@@ -1298,6 +1546,8 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_eventos&act
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
+**Resultado obtenido:** `PENDIENTE` - Requiere credenciales AWS S3.
+
 ### 11.5 Fotos de reseñas
 
 ```bash
@@ -1315,6 +1565,8 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_resenas&act
   -H "Authorization: Bearer $TOKEN"
 ```
 
+**Resultado obtenido:** `PENDIENTE` - Requiere credenciales AWS S3.
+
 ---
 
 ## 12. Seguridad y validaciones
@@ -1325,7 +1577,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=fotos_resenas&act
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=listar&busqueda=DROP%20TABLE%20usuarios"
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Patrón SQL detectado y bloqueado.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1342,7 +1596,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=listar&
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=admin&action=hack"
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Módulo no está en la lista blanca.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1359,7 +1615,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=admin&action=hack"
 curl -s "http://localhost/gpe_go_api/inputs.php"
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Faltan modulo y action.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1376,7 +1634,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php"
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=hackear"
 ```
 
-**Respuesta esperada:** `400 Bad Request`
+**Respuesta esperada:** `400 Bad Request` - Action no reconocido por el módulo.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1393,7 +1653,9 @@ curl -s "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action=hackear
 curl -s -X OPTIONS -v "http://localhost/gpe_go_api/inputs.php" 2>&1 | grep -E "(HTTP/|Access-Control)"
 ```
 
-**Respuesta esperada:** `200 OK` con headers CORS
+**Respuesta esperada:** `200 OK` con headers CORS completos.
+
+**Resultado obtenido:** `PASS`
 ```
 HTTP/1.1 200 OK
 Access-Control-Allow-Origin: *
@@ -1407,7 +1669,9 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 curl -s "http://localhost/gpe_go_api/inputs.php?modulo=usuarios&action=perfil"
 ```
 
-**Respuesta esperada:** `401 Unauthorized`
+**Respuesta esperada:** `401 Unauthorized` - JWT requerido.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1429,7 +1693,9 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
   -d '{"nombre":"Test"}'
 ```
 
-**Respuesta esperada:** `403 Forbidden`
+**Respuesta esperada:** `403 Forbidden` - Solo admin puede crear categorías.
+
+**Resultado obtenido:** `PASS`
 ```json
 {
     "success": false,
@@ -1444,68 +1710,74 @@ curl -s -X POST "http://localhost/gpe_go_api/inputs.php?modulo=categorias&action
 
 ## 13. Resumen de resultados
 
-| # | Módulo | Endpoint | Resultado |
-|---|--------|----------|-----------|
-| 1 | Categorías | listar | PASS |
-| 2 | Categorías | ver | PASS |
-| 3 | Categorías | crear (admin) | PASS |
-| 4 | Categorías | editar (admin) | PASS |
-| 5 | Categorías | eliminar (admin) | PASS |
-| 6 | Categorías | crear sin admin | PASS (403) |
-| 7 | Usuarios | registro | PASS |
-| 8 | Usuarios | registro duplicado | PASS (error) |
-| 9 | Usuarios | registro sin campos | PASS (error) |
-| 10 | Usuarios | registro con rol=admin | PASS (forzado publico) |
-| 11 | Usuarios | solicitar_codigo | PASS |
-| 12 | Usuarios | verificar_codigo incorrecto | PASS (error) |
-| 13 | Usuarios | verificar_codigo correcto | PASS + JWT |
-| 14 | Usuarios | perfil | PASS |
-| 15 | Usuarios | editar | PASS |
-| 16 | Usuarios | editar sin datos | PASS (error) |
-| 17 | Usuarios | perfil sin token | PASS (401) |
-| 18 | Usuarios | listar (admin) | PASS + paginación |
-| 19 | Usuarios | cambiar_rol (admin) | PASS |
-| 20 | Usuarios | cambiar_rol inválido | PASS (error) |
-| 21 | Lugares | registrar (comercio) | PASS (pendiente) |
-| 22 | Lugares | listar (público, sin pendientes) | PASS |
-| 23 | Lugares | listar_pendientes (moderador) | PASS |
-| 24 | Lugares | aprobar (moderador) | PASS |
-| 25 | Lugares | rechazar (admin) | PASS |
-| 26 | Lugares | ver | PASS |
-| 27 | Lugares | filtrar por categoría | PASS |
-| 28 | Lugares | buscar | PASS |
-| 29 | Lugares | mis_lugares | PASS |
-| 30 | Lugares | editar (dueño) | PASS |
-| 31 | Lugares | eliminar (soft delete) | PASS |
-| 32 | Lugares | ver eliminado | PASS (404) |
-| 33 | Eventos | crear evento | PASS |
-| 34 | Eventos | crear noticia | PASS |
-| 35 | Eventos | listar | PASS |
-| 36 | Eventos | filtrar por tipo | PASS |
-| 37 | Eventos | ver | PASS |
-| 38 | Eventos | editar | PASS |
-| 39 | Eventos | eliminar (soft delete) | PASS |
-| 40 | Favoritos | agregar lugar | PASS |
-| 41 | Favoritos | agregar evento | PASS |
-| 42 | Favoritos | duplicado | PASS (error) |
-| 43 | Favoritos | listar | PASS |
-| 44 | Favoritos | quitar | PASS |
-| 45 | Reseñas | crear | PASS |
-| 46 | Reseñas | duplicada | PASS (error) |
-| 47 | Reseñas | listar (con promedio) | PASS |
-| 48 | Reseñas | eliminar (admin) | PASS |
-| 49 | Reportes | crear | PASS |
-| 50 | Reportes | duplicado | PASS (error) |
-| 51 | Reportes | listar (admin) | PASS |
-| 52 | Reportes | revisar | PASS |
-| 53 | Seguridad | SQL injection | PASS (bloqueado) |
-| 54 | Seguridad | módulo inválido | PASS (error) |
-| 55 | Seguridad | sin parámetros | PASS (error) |
-| 56 | Seguridad | action inválido | PASS (error) |
-| 57 | Seguridad | CORS preflight | PASS (headers) |
-| 58 | Seguridad | sin auth | PASS (401) |
-| 59 | Seguridad | rol insuficiente | PASS (403) |
+| # | Módulo | Endpoint | Esperado | Obtenido |
+|---|--------|----------|----------|----------|
+| 1 | Categorías | listar | 200 + 7 categorías | PASS |
+| 2 | Categorías | ver | 200 + detalle | PASS |
+| 3 | Categorías | crear (admin) | 201 + categoría creada | PASS |
+| 4 | Categorías | editar (admin) | 200 + campos actualizados | PASS |
+| 5 | Categorías | eliminar (admin) | 200 + soft delete | PASS |
+| 6 | Categorías | crear sin admin | 403 Forbidden | PASS |
+| 7 | Usuarios | registro | 201 + rol publico | PASS |
+| 8 | Usuarios | registro duplicado | 400 EMAIL_EXISTENTE | PASS |
+| 9 | Usuarios | registro sin campos | 400 CAMPOS_REQUERIDOS | PASS |
+| 10 | Usuarios | registro con rol=admin | 201 + rol forzado publico | PASS |
+| 11 | Usuarios | solicitar_codigo | 200 + código 6 dígitos | PASS |
+| 12 | Usuarios | verificar_codigo incorrecto | 401 CODIGO_INVALIDO | PASS |
+| 13 | Usuarios | verificar_codigo correcto | 200 + JWT token | PASS |
+| 14 | Usuarios | perfil | 200 + datos usuario | PASS |
+| 15 | Usuarios | editar | 200 + nombre actualizado | PASS |
+| 16 | Usuarios | editar sin datos | 400 SIN_CAMBIOS | PASS |
+| 17 | Usuarios | perfil sin token | 401 AUTH_REQUIRED | PASS |
+| 18 | Usuarios | listar (admin) | 200 + paginación | PASS |
+| 19 | Usuarios | cambiar_rol (admin) | 200 + rol moderador | PASS |
+| 20 | Usuarios | cambiar_rol inválido | 400 ROL_INVALIDO | PASS |
+| 21 | Lugares | registrar (comercio) | 201 + estado pendiente | PASS |
+| 22 | Lugares | listar (público) | 200 + lista vacía | PASS |
+| 23 | Lugares | listar_pendientes | 200 + 2 pendientes | PASS |
+| 24 | Lugares | aprobar | 200 + estado aprobado | PASS |
+| 25 | Lugares | rechazar | 200 + estado rechazado | PASS |
+| 26 | Lugares | ver | 200 + detalle lugar | PASS |
+| 27 | Lugares | filtrar por categoría | 200 + 1 restaurante | PASS |
+| 28 | Lugares | buscar | 200 + coincidencia | PASS |
+| 29 | Lugares | mis_lugares | 200 + 2 lugares | PASS |
+| 30 | Lugares | editar (dueño) | 200 + campos actualizados | PASS |
+| 31 | Lugares | eliminar (soft delete) | 200 + eliminado | PASS |
+| 32 | Lugares | ver eliminado | 404 LUGAR_NO_ENCONTRADO | PASS |
+| 33 | Eventos | crear evento | 201 + lugar vinculado | PASS |
+| 34 | Eventos | crear noticia | 201 + sin lugar | PASS |
+| 35 | Eventos | listar | 200 + 2 eventos | PASS |
+| 36 | Eventos | filtrar por tipo | 200 + 1 noticia | PASS |
+| 37 | Eventos | ver | 200 + detalle | PASS |
+| 38 | Eventos | editar | 200 + título actualizado | PASS |
+| 39 | Eventos | eliminar (soft delete) | 200 + eliminado | PASS |
+| 40 | Favoritos | agregar lugar | 201 + id favorito | PASS |
+| 41 | Favoritos | agregar evento | 201 + id favorito | PASS |
+| 42 | Favoritos | duplicado | 400 YA_ES_FAVORITO | PASS |
+| 43 | Favoritos | listar | 200 + lugar y evento | PASS |
+| 44 | Favoritos | quitar | 200 + eliminado | PASS |
+| 45 | Reseñas | crear | 201 + calificación 5 | PASS |
+| 46 | Reseñas | duplicada | 400 RESENA_EXISTENTE | PASS |
+| 47 | Reseñas | listar (con promedio) | 200 + promedio 5.0 | PASS |
+| 48 | Reseñas | eliminar (admin) | 200 + soft delete | PASS |
+| 49 | Reportes | crear | 201 + estado pendiente | PASS |
+| 50 | Reportes | duplicado | 400 REPORTE_DUPLICADO | PASS |
+| 51 | Reportes | listar (admin) | 200 + paginación | PASS |
+| 52 | Reportes | revisar | 200 + estado revisado | PASS |
+| 53 | Seguridad | SQL injection | 400 DATOS_NO_PERMITIDOS | PASS |
+| 54 | Seguridad | módulo inválido | 400 MODULO_INVALIDO | PASS |
+| 55 | Seguridad | sin parámetros | 400 PARAMETROS_REQUERIDOS | PASS |
+| 56 | Seguridad | action inválido | 400 ACTION_INVALIDO | PASS |
+| 57 | Seguridad | CORS preflight | 200 + headers CORS | PASS |
+| 58 | Seguridad | sin auth | 401 AUTH_REQUIRED | PASS |
+| 59 | Seguridad | rol insuficiente | 403 FORBIDDEN | PASS |
+| 60-68 | Fotos | subir/listar/eliminar (x3) | Requiere S3 | PENDIENTE |
 
-**Total: 59 pruebas | 59 PASS | 0 FAIL**
+### Totales
 
-> **Nota:** Los endpoints de fotos (módulos `fotos_lugares`, `fotos_eventos`, `fotos_resenas`) requieren credenciales AWS S3 configuradas y no fueron probados en localhost. Su estructura y permisos están documentados en la sección 11.
+| Estado | Cantidad |
+|--------|----------|
+| **PASS** | 59 |
+| **FAIL** | 0 |
+| **PENDIENTE** (requiere S3) | 9 |
+| **TOTAL** | 68 |
