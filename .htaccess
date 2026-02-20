@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Pass Authorization header to PHP
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
