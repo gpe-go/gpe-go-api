@@ -73,13 +73,18 @@ function sanitizar_valor($valor) {
 
 /**
  * Sanitizar array recursivamente
+ * Los campos en $excluir se copian sin sanitizar (ej: imagen base64)
  */
-function sanitizar_array($datos) {
+function sanitizar_array($datos, $excluir = []) {
     $sanitizados = [];
 
     foreach ($datos as $key => $valor) {
         $key_sanitizado = sanitizar_valor($key);
-        $sanitizados[$key_sanitizado] = sanitizar_valor($valor);
+        if (in_array($key, $excluir)) {
+            $sanitizados[$key_sanitizado] = $valor;
+        } else {
+            $sanitizados[$key_sanitizado] = sanitizar_valor($valor);
+        }
     }
 
     return $sanitizados;
@@ -119,8 +124,8 @@ $_GET = sanitizar_array($_GET);
 // Sanitizar POST
 $_POST = sanitizar_array($_POST);
 
-// Obtener y sanitizar datos JSON del body
-$GLOBALS['INPUT_DATA'] = sanitizar_array(obtener_datos_json());
+// Obtener y sanitizar datos JSON del body (excluir campo imagen de sanitización)
+$GLOBALS['INPUT_DATA'] = sanitizar_array(obtener_datos_json(), ['imagen']);
 
 // Construir ruta al archivo del módulo
 $archivo_modulo = __DIR__ . "/inputs/inputs_{$modulo}.php";
