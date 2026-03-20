@@ -10,7 +10,7 @@ function listar_favoritos($id_usuario) {
 
     $stmt = $pdo->prepare("
         SELECT f.id, f.id_lugar, NULL as id_evento, 'lugar' as tipo,
-               l.nombre, l.descripcion, c.nombre as categoria_nombre
+               l.nombre, l.descripcion, l.imagen, l.ubicacion, c.nombre as categoria_nombre
         FROM tb_favoritos f
         JOIN tb_lugares l ON f.id_lugar = l.id
         JOIN tb_categorias c ON l.id_categoria = c.id
@@ -19,7 +19,7 @@ function listar_favoritos($id_usuario) {
         UNION ALL
 
         SELECT f.id, NULL as id_lugar, f.id_evento, 'evento' as tipo,
-               e.titulo as nombre, e.descripcion, NULL as categoria_nombre
+               e.titulo as nombre, e.descripcion, e.imagen, NULL as ubicacion, NULL as categoria_nombre
         FROM tb_favoritos f
         JOIN tb_eventos e ON f.id_evento = e.id
         WHERE f.id_usuario = ? AND f.id_evento IS NOT NULL AND f.enabled = 1 AND e.enabled = 1

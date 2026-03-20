@@ -34,7 +34,8 @@ function listar_lugares($filtros = [], $pagina = 1, $por_pagina = 10) {
     $total = $stmt->fetchColumn();
 
     $stmt = $pdo->prepare("
-        SELECT l.*, c.nombre as categoria_nombre
+        SELECT l.id, l.nombre, l.descripcion, l.imagen, l.ubicacion, l.direccion,
+               l.telefono, l.estado, c.nombre as categoria_nombre, c.id as id_categoria
         FROM tb_lugares l
         JOIN tb_categorias c ON l.id_categoria = c.id
         WHERE $where_sql

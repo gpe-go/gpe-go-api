@@ -12,7 +12,7 @@ $datos = $GLOBALS['INPUT_DATA'];
 switch ($action) {
 
     // ============================================
-    // REGISTRO DE USUARIO
+    // REGISTRO CON CÓDIGO (2FA)
     // ============================================
     case 'registro':
         validar_requeridos($datos, ['nombre', 'email']);
@@ -27,6 +27,62 @@ switch ($action) {
         $usuario = buscar_usuario_por_id($id);
 
         responder(true, formatear_usuario($usuario), 'Usuario registrado correctamente', 201);
+        break;
+
+    // ============================================
+    // REGISTRO CON CONTRASEÑA
+    // ============================================
+    case 'registro_password':
+        validar_requeridos($datos, ['nombre', 'email', 'password']);
+        validar_email($datos['email']);
+
+        if (strlen($datos['password']) < 6) {
+            responder_error('PASSWORD_CORTA', 'La contraseña debe tener al menos 6 caracteres', 400);
+        }
+
+        $id = crear_usuario_password([
+            'nombre' => $datos['nombre'],
+            'email' => $datos['email'],
+            'password' => $datos['password'],
+            'rol' => ROL_PUBLICO
+        ]);
+
+        $usuario = buscar_usuario_por_id($id);
+        $token = generar_token($usuario);
+
+        responder(true, [
+            'token' => $token,
+            'usuario' => formatear_usuario($usuario)
+        ], 'Cuenta creada correctamente', 201);
+        break;
+
+    // ============================================
+    // LOGIN CON CONTRASEÑA
+    // ============================================
+    case 'login_password':
+        validar_requeridos($datos, ['email', 'password']);
+        validar_email($datos['email']);
+
+        $usuario = buscar_usuario_por_email($datos['email']);
+
+        if (!$usuario) {
+            responder_error('CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos', 401);
+        }
+
+        if ($usuario['auth_tipo'] !== 'password') {
+            responder_error('AUTH_TIPO_INVALIDO', 'Esta cuenta usa inicio de sesión por código. Usa la opción correcta.', 400);
+        }
+
+        if (!verificar_password($usuario, $datos['password'])) {
+            responder_error('CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos', 401);
+        }
+
+        $token = generar_token($usuario);
+
+        responder(true, [
+            'token' => $token,
+            'usuario' => formatear_usuario($usuario)
+        ], 'Login exitoso');
         break;
 
     // ============================================

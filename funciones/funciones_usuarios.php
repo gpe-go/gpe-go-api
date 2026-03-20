@@ -31,7 +31,7 @@ function buscar_usuario_por_id($id) {
 }
 
 /**
- * Crear nuevo usuario
+ * Crear nuevo usuario (registro por código)
  */
 function crear_usuario($datos) {
     $pdo = conectarBD();
@@ -39,15 +39,14 @@ function crear_usuario($datos) {
     $email_encriptado = encriptar_email($datos['email']);
     $rol = $datos['rol'] ?? ROL_PUBLICO;
 
-    // Verificar si ya existe
     $existente = buscar_usuario_por_email($datos['email']);
     if ($existente) {
         responder_error('EMAIL_EXISTENTE', 'Ya existe un usuario con este email', 400);
     }
 
     $stmt = $pdo->prepare("
-        INSERT INTO tb_usuarios (nombre, email, rol)
-        VALUES (?, ?, ?)
+        INSERT INTO tb_usuarios (nombre, email, rol, auth_tipo)
+        VALUES (?, ?, ?, 'codigo')
     ");
 
     $stmt->execute([
@@ -60,7 +59,38 @@ function crear_usuario($datos) {
 }
 
 /**
- * Guardar código de verificación
+ * Crear nuevo usuario con contraseña
+ */
+function crear_usuario_password($datos) {
+    $pdo = conectarBD();
+
+    $email_encriptado = encriptar_email($datos['email']);
+    $rol = $datos['rol'] ?? ROL_PUBLICO;
+
+    $existente = buscar_usuario_por_email($datos['email']);
+    if ($existente) {
+        responder_error('EMAIL_EXISTENTE', 'Ya existe un usuario con este email', 400);
+    }
+
+    $password_hash = password_hash($datos['password'], PASSWORD_BCRYPT);
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tb_usuarios (nombre, email, password, rol, auth_tipo)
+        VALUES (?, ?, ?, ?, 'password')
+    ");
+
+    $stmt->execute([
+        $datos['nombre'],
+        $email_encriptado,
+        $password_hash,
+        $rol
+    ]);
+
+    return $pdo->lastInsertId();
+}
+
+/**
+ * Guardar código de verificación (2FA)
  */
 function guardar_codigo_verificacion($id_usuario, $codigo) {
     $pdo = conectarBD();
@@ -70,7 +100,7 @@ function guardar_codigo_verificacion($id_usuario, $codigo) {
 
     $stmt = $pdo->prepare("
         UPDATE tb_usuarios
-        SET password = ?, codigo_expira = ?
+        SET codigo = ?, codigo_expira = ?
         WHERE id = ?
     ");
 
@@ -80,10 +110,9 @@ function guardar_codigo_verificacion($id_usuario, $codigo) {
 }
 
 /**
- * Verificar código de verificación
+ * Verificar código 2FA
  */
 function verificar_codigo($usuario, $codigo_ingresado) {
-    // Verificar expiración
     if (empty($usuario['codigo_expira'])) {
         return ['valido' => false, 'error' => 'No hay código de verificación'];
     }
@@ -92,14 +121,23 @@ function verificar_codigo($usuario, $codigo_ingresado) {
         return ['valido' => false, 'error' => 'El código ha expirado'];
     }
 
-    // Comparar código
-    $codigo_guardado = desencriptar($usuario['password']);
+    $codigo_guardado = desencriptar($usuario['codigo']);
 
     if ($codigo_guardado !== $codigo_ingresado) {
         return ['valido' => false, 'error' => 'Código incorrecto'];
     }
 
     return ['valido' => true];
+}
+
+/**
+ * Verificar contraseña
+ */
+function verificar_password($usuario, $password) {
+    if (empty($usuario['password'])) {
+        return false;
+    }
+    return password_verify($password, $usuario['password']);
 }
 
 /**
@@ -119,6 +157,11 @@ function actualizar_usuario($id, $datos) {
     if (isset($datos['rol'])) {
         $campos[] = "rol = ?";
         $valores[] = $datos['rol'];
+    }
+
+    if (isset($datos['password'])) {
+        $campos[] = "password = ?";
+        $valores[] = password_hash($datos['password'], PASSWORD_BCRYPT);
     }
 
     if (empty($campos)) {
@@ -141,13 +184,11 @@ function listar_usuarios($pagina = 1, $por_pagina = 10) {
 
     $offset = ($pagina - 1) * $por_pagina;
 
-    // Contar total
     $stmt = $pdo->query("SELECT COUNT(*) FROM tb_usuarios WHERE enabled = 1");
     $total = $stmt->fetchColumn();
 
-    // Obtener usuarios
     $stmt = $pdo->prepare("
-        SELECT id, nombre, email, rol
+        SELECT id, nombre, email, rol, auth_tipo
         FROM tb_usuarios
         WHERE enabled = 1
         ORDER BY id DESC
@@ -156,7 +197,6 @@ function listar_usuarios($pagina = 1, $por_pagina = 10) {
     $stmt->execute();
     $usuarios = $stmt->fetchAll();
 
-    // Desencriptar emails
     foreach ($usuarios as &$usuario) {
         $usuario['email'] = desencriptar_email($usuario['email']);
     }
@@ -180,13 +220,14 @@ function eliminar_usuario($id) {
 }
 
 /**
- * Formatear usuario para respuesta (desencriptar email)
+ * Formatear usuario para respuesta
  */
 function formatear_usuario($usuario) {
     return [
         'id' => $usuario['id'],
         'nombre' => $usuario['nombre'],
         'email' => desencriptar_email($usuario['email']),
-        'rol' => $usuario['rol']
+        'rol' => $usuario['rol'],
+        'auth_tipo' => $usuario['auth_tipo'] ?? 'codigo'
     ];
 }
