@@ -36,6 +36,28 @@ switch ($action) {
         responder(true, $resultado);
         break;
 
+    case 'listar_todos':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $pagina = (int)($_GET['pagina'] ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+
+        $resultado = listar_lugares_todos($pagina, $por_pagina);
+
+        responder(true, $resultado);
+        break;
+
+    case 'listar_rechazados':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $pagina = (int)($_GET['pagina'] ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+
+        $resultado = listar_lugares_rechazados($pagina, $por_pagina);
+
+        responder(true, $resultado);
+        break;
+
     case 'ver':
         $id = $_GET['id'] ?? null;
 

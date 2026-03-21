@@ -36,6 +36,49 @@ function listar_resenas_lugar($id_lugar, $pagina = 1, $por_pagina = 10) {
     ];
 }
 
+/**
+ * Listar todas las reseñas (sin requerir id_lugar) - para admin/moderador
+ */
+function listar_resenas_todas($pagina = 1, $por_pagina = 10, $id_lugar = null) {
+    $pdo = conectarBD();
+
+    $offset = ($pagina - 1) * $por_pagina;
+
+    $where = ["r.enabled = 1"];
+    $params = [];
+
+    if ($id_lugar) {
+        $where[] = "r.id_lugar = ?";
+        $params[] = $id_lugar;
+    }
+
+    $where_sql = implode(' AND ', $where);
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_resenas r WHERE $where_sql");
+    $stmt->execute($params);
+    $total = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("
+        SELECT r.id, r.comentario, r.calificacion, r.id_usuario, r.id_lugar,
+               u.nombre as usuario_nombre,
+               l.nombre as lugar_nombre
+        FROM tb_resenas r
+        JOIN tb_usuarios u ON r.id_usuario = u.id
+        JOIN tb_lugares l ON r.id_lugar = l.id
+        WHERE $where_sql
+        ORDER BY r.id DESC
+        LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
+    ");
+    $stmt->execute($params);
+
+    return [
+        'resenas' => $stmt->fetchAll(),
+        'total' => $total,
+        'pagina' => $pagina,
+        'por_pagina' => $por_pagina
+    ];
+}
+
 function obtener_promedio_calificacion($id_lugar) {
     $pdo = conectarBD();
 

@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS tb_lugares (
     INDEX idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla de categorías de eventos
+CREATE TABLE IF NOT EXISTS tb_categorias_eventos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    enabled TINYINT DEFAULT 1,
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla de eventos
 CREATE TABLE IF NOT EXISTS tb_eventos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -57,11 +66,15 @@ CREATE TABLE IF NOT EXISTS tb_eventos (
     fecha_fin DATE,
     tipo ENUM('evento', 'noticia') DEFAULT 'evento',
     id_lugar INT,
+    id_categoria_evento INT,
+    publicado TINYINT DEFAULT 0,
     enabled TINYINT DEFAULT 1,
     FOREIGN KEY (id_lugar) REFERENCES tb_lugares(id) ON DELETE SET NULL,
+    FOREIGN KEY (id_categoria_evento) REFERENCES tb_categorias_eventos(id) ON DELETE SET NULL,
     INDEX idx_tipo (tipo),
     INDEX idx_fechas (fecha_inicio, fecha_fin),
     INDEX idx_lugar (id_lugar),
+    INDEX idx_categoria_evento (id_categoria_evento),
     INDEX idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -153,6 +166,23 @@ CREATE TABLE IF NOT EXISTS tb_reportes (
     INDEX idx_estado (estado),
     INDEX idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de contactos de emergencia
+CREATE TABLE IF NOT EXISTS tb_emergencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    descripcion TEXT,
+    telefono VARCHAR(20) NOT NULL,
+    enabled TINYINT DEFAULT 1,
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insertar categorías de eventos iniciales
+INSERT INTO tb_categorias_eventos (nombre) VALUES
+('Deporte'),
+('Cultural'),
+('Gastronomía'),
+('Sociales');
 
 -- Insertar categorías iniciales
 INSERT INTO tb_categorias (nombre, descripcion) VALUES

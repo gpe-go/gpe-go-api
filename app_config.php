@@ -19,11 +19,21 @@ if (file_exists($envFile)) {
 // Constantes de entorno
 define('APP_ENV', getenv('APP_ENV') ?: 'development');
 
-// Constantes de base de datos
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_NAME', getenv('DB_NAME') ?: 'gpe_go_db');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: '');
+// Detectar si es localhost para elegir BD
+$es_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1'])
+         || in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']);
+
+if ($es_local) {
+    define('DB_HOST', getenv('DB_LOCAL_HOST') ?: 'localhost');
+    define('DB_NAME', getenv('DB_LOCAL_NAME') ?: 'gpe_go_db');
+    define('DB_USER', getenv('DB_LOCAL_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_LOCAL_PASS') ?: '');
+} else {
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+    define('DB_NAME', getenv('DB_NAME') ?: 'gpe_go_db');
+    define('DB_USER', getenv('DB_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+}
 define('DB_CHARSET', 'utf8mb4');
 
 // Constantes JWT

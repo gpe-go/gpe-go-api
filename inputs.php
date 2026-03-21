@@ -110,7 +110,9 @@ $modulos_permitidos = [
     'fotos_lugares',
     'fotos_eventos',
     'fotos_resenas',
-    'reportes'
+    'reportes',
+    'emergencias',
+    'categorias_eventos'
 ];
 
 // Validar módulo

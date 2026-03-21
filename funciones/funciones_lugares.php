@@ -171,6 +171,64 @@ function eliminar_lugar($id) {
 }
 
 /**
+ * Listar todos los lugares (sin filtrar por estado) - para admin/moderador
+ */
+function listar_lugares_todos($pagina = 1, $por_pagina = 10) {
+    $pdo = conectarBD();
+
+    $offset = ($pagina - 1) * $por_pagina;
+
+    $stmt = $pdo->query("SELECT COUNT(*) FROM tb_lugares WHERE enabled = 1");
+    $total = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("
+        SELECT l.*, c.nombre as categoria_nombre
+        FROM tb_lugares l
+        JOIN tb_categorias c ON l.id_categoria = c.id
+        WHERE l.enabled = 1
+        ORDER BY l.id DESC
+        LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
+    ");
+    $stmt->execute();
+
+    return [
+        'lugares' => $stmt->fetchAll(),
+        'total' => $total,
+        'pagina' => $pagina,
+        'por_pagina' => $por_pagina
+    ];
+}
+
+/**
+ * Listar lugares rechazados - para admin/moderador
+ */
+function listar_lugares_rechazados($pagina = 1, $por_pagina = 10) {
+    $pdo = conectarBD();
+
+    $offset = ($pagina - 1) * $por_pagina;
+
+    $stmt = $pdo->query("SELECT COUNT(*) FROM tb_lugares WHERE enabled = 1 AND estado = 'rechazado'");
+    $total = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("
+        SELECT l.*, c.nombre as categoria_nombre
+        FROM tb_lugares l
+        JOIN tb_categorias c ON l.id_categoria = c.id
+        WHERE l.enabled = 1 AND l.estado = 'rechazado'
+        ORDER BY l.id DESC
+        LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
+    ");
+    $stmt->execute();
+
+    return [
+        'lugares' => $stmt->fetchAll(),
+        'total' => $total,
+        'pagina' => $pagina,
+        'por_pagina' => $por_pagina
+    ];
+}
+
+/**
  * Obtener lugares del usuario
  */
 function obtener_lugares_usuario($id_usuario) {

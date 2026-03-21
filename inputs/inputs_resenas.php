@@ -41,6 +41,18 @@ switch ($action) {
         ]);
         break;
 
+    case 'listar_todas':
+        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+
+        $pagina = (int)($_GET['pagina'] ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+        $id_lugar = $_GET['id_lugar'] ?? null;
+
+        $resultado = listar_resenas_todas($pagina, $por_pagina, $id_lugar);
+
+        responder(true, $resultado);
+        break;
+
     case 'crear':
         $auth = requiere_auth();
 

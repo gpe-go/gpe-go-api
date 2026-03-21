@@ -11,6 +11,10 @@ function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
     $where = ["e.enabled = 1"];
     $params = [];
 
+    if (empty($filtros['incluir_no_publicados'])) {
+        $where[] = "e.publicado = 1";
+    }
+
     if (!empty($filtros['tipo'])) {
         $where[] = "e.tipo = ?";
         $params[] = $filtros['tipo'];
@@ -23,6 +27,11 @@ function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
 
     if (!isset($filtros['incluir_pasados']) || !$filtros['incluir_pasados']) {
         $where[] = "(e.fecha_fin IS NULL OR e.fecha_fin >= CURDATE())";
+    }
+
+    if (!empty($filtros['id_categoria_evento'])) {
+        $where[] = "e.id_categoria_evento = ?";
+        $params[] = $filtros['id_categoria_evento'];
     }
 
     if (!empty($filtros['busqueda'])) {
@@ -40,9 +49,10 @@ function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
     $total = $stmt->fetchColumn();
 
     $stmt = $pdo->prepare("
-        SELECT e.*, l.nombre as lugar_nombre
+        SELECT e.*, l.nombre as lugar_nombre, ce.nombre as categoria_evento_nombre
         FROM tb_eventos e
         LEFT JOIN tb_lugares l ON e.id_lugar = l.id
+        LEFT JOIN tb_categorias_eventos ce ON e.id_categoria_evento = ce.id
         WHERE $where_sql
         ORDER BY e.fecha_inicio ASC
         LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
@@ -61,9 +71,10 @@ function buscar_evento_por_id($id) {
     $pdo = conectarBD();
 
     $stmt = $pdo->prepare("
-        SELECT e.*, l.nombre as lugar_nombre
+        SELECT e.*, l.nombre as lugar_nombre, ce.nombre as categoria_evento_nombre
         FROM tb_eventos e
         LEFT JOIN tb_lugares l ON e.id_lugar = l.id
+        LEFT JOIN tb_categorias_eventos ce ON e.id_categoria_evento = ce.id
         WHERE e.id = ? AND e.enabled = 1
     ");
     $stmt->execute([$id]);
@@ -75,8 +86,8 @@ function crear_evento($datos) {
     $pdo = conectarBD();
 
     $stmt = $pdo->prepare("
-        INSERT INTO tb_eventos (titulo, descripcion, fecha_inicio, fecha_fin, tipo, id_lugar)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO tb_eventos (titulo, descripcion, fecha_inicio, fecha_fin, tipo, id_lugar, id_categoria_evento, publicado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
@@ -85,7 +96,9 @@ function crear_evento($datos) {
         $datos['fecha_inicio'],
         $datos['fecha_fin'] ?? null,
         $datos['tipo'] ?? TIPO_EVENTO,
-        $datos['id_lugar'] ?? null
+        $datos['id_lugar'] ?? null,
+        $datos['id_categoria_evento'] ?? null,
+        $datos['publicado'] ?? 0
     ]);
 
     return $pdo->lastInsertId();
@@ -97,7 +110,7 @@ function actualizar_evento($id, $datos) {
     $campos = [];
     $valores = [];
 
-    $campos_permitidos = ['titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'tipo', 'id_lugar'];
+    $campos_permitidos = ['titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'tipo', 'id_lugar', 'id_categoria_evento', 'publicado'];
 
     foreach ($campos_permitidos as $campo) {
         if (array_key_exists($campo, $datos)) {

@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_eventos.php';
 require_once __DIR__ . '/../funciones/funciones_lugares.php';
+require_once __DIR__ . '/../funciones/funciones_categorias_eventos.php';
 
 $action = $_GET['action'] ?? '';
 $datos = $GLOBALS['INPUT_DATA'];
@@ -13,11 +14,16 @@ $datos = $GLOBALS['INPUT_DATA'];
 switch ($action) {
 
     case 'listar':
+        $usuario_actual = obtener_usuario_actual();
+        $es_admin = $usuario_actual && in_array($usuario_actual['rol'], [ROL_MODERADOR, ROL_ADMIN]);
+
         $filtros = [
             'tipo' => $_GET['tipo'] ?? null,
             'id_lugar' => $_GET['id_lugar'] ?? null,
+            'id_categoria_evento' => $_GET['id_categoria_evento'] ?? null,
             'busqueda' => $_GET['busqueda'] ?? null,
-            'incluir_pasados' => isset($_GET['incluir_pasados'])
+            'incluir_pasados' => isset($_GET['incluir_pasados']),
+            'incluir_no_publicados' => $es_admin && isset($_GET['incluir_no_publicados'])
         ];
         $pagina = (int)($_GET['pagina'] ?? 1);
         $por_pagina = (int)($_GET['por_pagina'] ?? 10);
@@ -59,6 +65,13 @@ switch ($action) {
             }
         }
 
+        if (!empty($datos['id_categoria_evento'])) {
+            $cat = buscar_categoria_evento_por_id($datos['id_categoria_evento']);
+            if (!$cat) {
+                responder_error('CATEGORIA_EVENTO_NO_ENCONTRADA', 'La categoría de evento especificada no existe', 400);
+            }
+        }
+
         if (!empty($datos['fecha_fin']) && $datos['fecha_fin'] < $datos['fecha_inicio']) {
             responder_error('FECHAS_INVALIDAS', 'La fecha de fin no puede ser anterior a la fecha de inicio', 400);
         }
@@ -92,6 +105,13 @@ switch ($action) {
             $lugar = buscar_lugar_por_id($datos['id_lugar']);
             if (!$lugar) {
                 responder_error('LUGAR_NO_ENCONTRADO', 'El lugar especificado no existe', 400);
+            }
+        }
+
+        if (!empty($datos['id_categoria_evento'])) {
+            $cat = buscar_categoria_evento_por_id($datos['id_categoria_evento']);
+            if (!$cat) {
+                responder_error('CATEGORIA_EVENTO_NO_ENCONTRADA', 'La categoría de evento especificada no existe', 400);
             }
         }
 
