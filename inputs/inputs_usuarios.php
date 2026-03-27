@@ -30,6 +30,31 @@ switch ($action) {
         break;
 
     // ============================================
+    // LOGIN CON CONTRASEÑA (DASHBOARD)
+    // ============================================
+    case 'login':
+        validar_requeridos($datos, ['email', 'password']);
+        validar_email($datos['email']);
+
+        $usuario = buscar_usuario_por_email($datos['email']);
+
+        if (!$usuario) {
+            responder_error('CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos', 401);
+        }
+
+        if (!verificar_password($usuario, $datos['password'])) {
+            responder_error('CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos', 401);
+        }
+
+        $token = generar_token($usuario);
+
+        responder(true, [
+            'token' => $token,
+            'usuario' => formatear_usuario($usuario)
+        ], 'Login exitoso');
+        break;
+
+    // ============================================
     // SOLICITAR CÓDIGO 2FA
     // ============================================
     case 'solicitar_codigo':

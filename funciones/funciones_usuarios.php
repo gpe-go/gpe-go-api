@@ -1,6 +1,9 @@
 <?php
 /**
  * Funciones para el módulo de usuarios
+ *
+ * Esquema real de tb_usuarios:
+ *   id, nombre, email, password, codigo_expira, rol (enum), enabled
  */
 
 require_once __DIR__ . '/index.php';
@@ -12,7 +15,10 @@ function buscar_usuario_por_email($email) {
     $pdo = conectarBD();
     $email_encriptado = encriptar_email($email);
 
-    $stmt = $pdo->prepare("SELECT * FROM tb_usuarios WHERE email = ? AND enabled = 1");
+    $stmt = $pdo->prepare("
+        SELECT * FROM tb_usuarios
+        WHERE email = ? AND enabled = 1
+    ");
     $stmt->execute([$email_encriptado]);
 
     return $stmt->fetch();
@@ -24,7 +30,10 @@ function buscar_usuario_por_email($email) {
 function buscar_usuario_por_id($id) {
     $pdo = conectarBD();
 
-    $stmt = $pdo->prepare("SELECT * FROM tb_usuarios WHERE id = ? AND enabled = 1");
+    $stmt = $pdo->prepare("
+        SELECT * FROM tb_usuarios
+        WHERE id = ? AND enabled = 1
+    ");
     $stmt->execute([$id]);
 
     return $stmt->fetch();
@@ -83,16 +92,15 @@ function guardar_codigo_verificacion($id_usuario, $codigo) {
  * Verificar código de verificación
  */
 function verificar_codigo($usuario, $codigo_ingresado) {
-    // Verificar expiración
-    if (empty($usuario['codigo_expira'])) {
+    if (empty($usuario['password'])) {
         return ['valido' => false, 'error' => 'No hay código de verificación'];
     }
 
-    if (strtotime($usuario['codigo_expira']) < time()) {
+    // Verificar expiración
+    if (!empty($usuario['codigo_expira']) && strtotime($usuario['codigo_expira']) < time()) {
         return ['valido' => false, 'error' => 'El código ha expirado'];
     }
 
-    // Comparar código
     $codigo_guardado = desencriptar($usuario['password']);
 
     if ($codigo_guardado !== $codigo_ingresado) {
@@ -100,6 +108,16 @@ function verificar_codigo($usuario, $codigo_ingresado) {
     }
 
     return ['valido' => true];
+}
+
+/**
+ * Verificar contraseña del usuario (para login con password)
+ */
+function verificar_password($usuario, $password) {
+    if (empty($usuario['password'])) {
+        return false;
+    }
+    return password_verify($password, $usuario['password']);
 }
 
 /**
