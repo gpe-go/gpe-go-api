@@ -192,6 +192,23 @@ switch ($action) {
         break;
 
     // ============================================
+    // ELIMINAR CUENTA PROPIA
+    // ============================================
+    case 'eliminar_cuenta':
+        $auth = requiere_auth();
+
+        $usuario = buscar_usuario_por_id($auth['id']);
+
+        if (!$usuario) {
+            responder_error('USUARIO_NO_ENCONTRADO', 'Usuario no encontrado', 404);
+        }
+
+        eliminar_usuario($auth['id']);
+
+        responder(true, null, 'Cuenta eliminada correctamente');
+        break;
+
+    // ============================================
     // ACTION NO VÁLIDO
     // ============================================
     default:

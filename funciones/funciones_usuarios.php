@@ -188,12 +188,12 @@ function listar_usuarios($pagina = 1, $por_pagina = 10) {
 }
 
 /**
- * Eliminar usuario (borrado lógico)
+ * Eliminar usuario (borrado físico)
  */
 function eliminar_usuario($id) {
     $pdo = conectarBD();
 
-    $stmt = $pdo->prepare("UPDATE tb_usuarios SET enabled = 0 WHERE id = ?");
+    $stmt = $pdo->prepare("DELETE FROM tb_usuarios WHERE id = ?");
     return $stmt->execute([$id]);
 }
 
