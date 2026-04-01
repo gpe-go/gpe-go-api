@@ -13,7 +13,14 @@ ALTER TABLE tb_usuarios
 ALTER TABLE tb_resenas
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
--- 3. Tabla de mensajes de soporte
+-- 3. Alcaldía de Guadalupe en emergencias
+INSERT INTO tb_emergencias (nombre, descripcion, telefono, enabled)
+SELECT 'Alcaldía de Guadalupe', 'Municipio de Guadalupe', '+528180306000', 1
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_emergencias WHERE telefono = '+528180306000'
+);
+
+-- 4. Tabla de mensajes de soporte
 CREATE TABLE IF NOT EXISTS tb_mensajes_soporte (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     nombre      VARCHAR(100) NOT NULL,
