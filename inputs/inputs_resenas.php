@@ -75,8 +75,39 @@ switch ($action) {
         responder(true, $resena, 'Reseña publicada', 201);
         break;
 
+    case 'editar':
+        $auth = requiere_auth();
+
+        $id = $_GET['id'] ?? null;
+        if (!$id) {
+            responder_error('ID_REQUERIDO', 'Se requiere el ID de la reseña', 400);
+        }
+
+        $resena = buscar_resena_por_id($id);
+        if (!$resena) {
+            responder_error('RESENA_NO_ENCONTRADA', 'Reseña no encontrada', 404);
+        }
+
+        if ($resena['id_usuario'] != $auth['id']) {
+            responder_error('FORBIDDEN', 'Solo puedes editar tus propias reseñas', 403);
+        }
+
+        if (isset($datos['calificacion'])) {
+            $cal = (int)$datos['calificacion'];
+            if ($cal < 1 || $cal > 5) {
+                responder_error('CALIFICACION_INVALIDA', 'La calificación debe ser entre 1 y 5', 400);
+            }
+            $datos['calificacion'] = $cal;
+        }
+
+        editar_resena($id, $auth['id'], $datos);
+        $resena = buscar_resena_por_id($id);
+
+        responder(true, $resena, 'Reseña actualizada');
+        break;
+
     case 'eliminar':
-        requiere_rol([ROL_MODERADOR, ROL_ADMIN]);
+        $auth = requiere_auth();
 
         $id = $_GET['id'] ?? null;
 
@@ -88,6 +119,14 @@ switch ($action) {
 
         if (!$resena) {
             responder_error('RESENA_NO_ENCONTRADA', 'Reseña no encontrada', 404);
+        }
+
+        // Permite al dueño o a moderador/admin eliminar
+        $es_dueno      = $resena['id_usuario'] == $auth['id'];
+        $es_moderador  = in_array($auth['rol'], [ROL_MODERADOR, ROL_ADMIN]);
+
+        if (!$es_dueno && !$es_moderador) {
+            responder_error('FORBIDDEN', 'No tienes permisos para eliminar esta reseña', 403);
         }
 
         eliminar_resena($id);

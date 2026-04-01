@@ -198,13 +198,23 @@ function eliminar_usuario($id) {
 }
 
 /**
- * Formatear usuario para respuesta (desencriptar email)
+ * Actualizar foto de perfil del usuario (URL de S3)
+ */
+function actualizar_foto_perfil($id, $url) {
+    $pdo = conectarBD();
+    $stmt = $pdo->prepare("UPDATE tb_usuarios SET foto_url = ? WHERE id = ?");
+    return $stmt->execute([$url, $id]);
+}
+
+/**
+ * Formatear usuario para respuesta (desencriptar email, incluye foto_url)
  */
 function formatear_usuario($usuario) {
     return [
-        'id' => $usuario['id'],
-        'nombre' => $usuario['nombre'],
-        'email' => desencriptar_email($usuario['email']),
-        'rol' => $usuario['rol']
+        'id'       => $usuario['id'],
+        'nombre'   => $usuario['nombre'],
+        'email'    => desencriptar_email($usuario['email']),
+        'rol'      => $usuario['rol'],
+        'foto_url' => $usuario['foto_url'] ?? null,
     ];
 }

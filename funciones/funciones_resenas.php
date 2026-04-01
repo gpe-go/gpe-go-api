@@ -5,7 +5,7 @@
 
 require_once __DIR__ . '/index.php';
 
-function listar_resenas_lugar($id_lugar, $pagina = 1, $por_pagina = 10) {
+function listar_resenas_lugar($id_lugar, $pagina = 1, $por_pagina = 50) {
     $pdo = conectarBD();
 
     $offset = ($pagina - 1) * $por_pagina;
@@ -17,22 +17,34 @@ function listar_resenas_lugar($id_lugar, $pagina = 1, $por_pagina = 10) {
     $stmt->execute([$id_lugar]);
     $total = $stmt->fetchColumn();
 
+    // Incluye fotos de cada reseña y fecha de creación
     $stmt = $pdo->prepare("
         SELECT r.id, r.comentario, r.calificacion, r.id_usuario,
-               u.nombre as usuario_nombre
+               u.nombre as usuario_nombre,
+               DATE_FORMAT(r.created_at, '%d/%m/%Y') as fecha,
+               IFNULL(GROUP_CONCAT(fr.url ORDER BY fr.orden SEPARATOR '|||'), '') as fotos_raw
         FROM tb_resenas r
         JOIN tb_usuarios u ON r.id_usuario = u.id
+        LEFT JOIN tb_fotos_resenas fr ON fr.id_resena = r.id AND fr.enabled = 1
         WHERE r.id_lugar = ? AND r.enabled = 1
+        GROUP BY r.id, r.comentario, r.calificacion, r.id_usuario, u.nombre, r.created_at
         ORDER BY r.id DESC
         LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
     ");
     $stmt->execute([$id_lugar]);
+    $rows = $stmt->fetchAll();
+
+    // Parsear fotos como array
+    foreach ($rows as &$row) {
+        $row['fotos'] = $row['fotos_raw'] !== '' ? explode('|||', $row['fotos_raw']) : [];
+        unset($row['fotos_raw']);
+    }
 
     return [
-        'resenas' => $stmt->fetchAll(),
-        'total' => $total,
-        'pagina' => $pagina,
-        'por_pagina' => $por_pagina
+        'resenas'    => $rows,
+        'total'      => $total,
+        'pagina'     => $pagina,
+        'por_pagina' => $por_pagina,
     ];
 }
 
@@ -143,6 +155,34 @@ function crear_resena($datos, $id_usuario) {
     ]);
 
     return $pdo->lastInsertId();
+}
+
+function editar_resena($id, $id_usuario, $datos) {
+    $pdo = conectarBD();
+
+    $campos  = [];
+    $valores = [];
+
+    if (isset($datos['comentario'])) {
+        $campos[]  = "comentario = ?";
+        $valores[] = $datos['comentario'];
+    }
+
+    if (isset($datos['calificacion'])) {
+        $campos[]  = "calificacion = ?";
+        $valores[] = (int)$datos['calificacion'];
+    }
+
+    if (empty($campos)) {
+        return false;
+    }
+
+    $valores[] = $id;
+    $valores[] = $id_usuario;
+
+    $sql  = "UPDATE tb_resenas SET " . implode(', ', $campos) . " WHERE id = ? AND id_usuario = ? AND enabled = 1";
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute($valores);
 }
 
 function eliminar_resena($id) {

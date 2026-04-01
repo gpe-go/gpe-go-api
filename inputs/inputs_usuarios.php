@@ -192,6 +192,29 @@ switch ($action) {
         break;
 
     // ============================================
+    // SUBIR FOTO DE PERFIL A S3
+    // ============================================
+    case 'subir_foto':
+        $auth = requiere_auth();
+
+        // La imagen viene sin sanitizar (base64 puro)
+        $datos_raw = obtener_datos_json();
+
+        if (empty($datos_raw['imagen'])) {
+            responder_error('IMAGEN_REQUERIDA', 'Se requiere la imagen en base64', 400);
+        }
+
+        require_once __DIR__ . '/../funciones/funciones_fotos.php';
+
+        $url = subir_imagen_s3($datos_raw['imagen'], 'perfiles');
+
+        actualizar_foto_perfil($auth['id'], $url);
+
+        $usuario = buscar_usuario_por_id($auth['id']);
+        responder(true, ['url' => $url, 'usuario' => formatear_usuario($usuario)], 'Foto de perfil actualizada');
+        break;
+
+    // ============================================
     // ELIMINAR CUENTA PROPIA
     // ============================================
     case 'eliminar_cuenta':
