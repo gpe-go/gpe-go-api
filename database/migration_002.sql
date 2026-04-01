@@ -31,6 +31,6 @@ INSERT INTO tb_contacto_info (clave, valor, descripcion, orden) VALUES
 ('email_1',   'turismo@guadalupe.gob.mx',  'Email Turismo',              1),
 ('email_2',   'info@guadalupe.gob.mx',     'Email General',              2),
 ('horario',   'Lunes a viernes de 8:00 a 17:00 horas', 'Horario de atencion', 3),
-('direccion', 'Palacio Municipal, Hidalgo S/N Col. Centro, Guadalupe, Nuevo Leon, Mexico', 'Direccion Palacio Municipal', 4),
+('direccion', 'C/ Hidalgo SN, Centro de Guadalupe, 67100 Guadalupe, N.L.', 'Direccion Palacio Municipal', 4),
 ('maps_url',  'https://maps.google.com/?q=Palacio+Municipal+Guadalupe+Nuevo+Leon+Mexico', 'Google Maps URL', 5)
 ON DUPLICATE KEY UPDATE valor = VALUES(valor);
