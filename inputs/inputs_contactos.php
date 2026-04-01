@@ -19,16 +19,11 @@ switch ($action) {
         responder(true, $emergencias);
         break;
 
-    // ── Info institucional del municipio ───────────────────
+    // ── Info institucional del municipio (desde BD) ────────
     case 'info':
-        responder(true, [
-            'emails'    => ['turismo@guadalupe.gob.mx', 'info@guadalupe.gob.mx'],
-            'telefono'  => '+52 (81) 2020-7800',
-            'alcaldia'  => '+52 (81) 2020-7800',
-            'direccion' => 'Palacio Municipal, Centro, Guadalupe, N.L.',
-            'horario'   => '9:00 AM – 6:00 PM (Lunes a Viernes)',
-            'web'       => 'https://www.guadalupe.gob.mx',
-        ]);
+        require_once __DIR__ . '/../funciones/funciones_emergencias.php';
+        $info = obtener_info_contacto();
+        responder(true, $info);
         break;
 
     // ── Enviar mensaje de soporte ──────────────────────────

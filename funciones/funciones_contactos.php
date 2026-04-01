@@ -62,3 +62,46 @@ function marcar_mensaje_leido($id) {
     $stmt = $pdo->prepare("UPDATE tb_mensajes_soporte SET leido = 1 WHERE id = ?");
     return $stmt->execute([$id]);
 }
+
+/**
+ * Obtiene la información de contacto institucional desde tb_contacto_info
+ * y el teléfono de la Alcaldía desde tb_emergencias
+ */
+function obtener_info_contacto() {
+    $pdo = conectarBD();
+
+    // Leer todas las claves de tb_contacto_info
+    $stmt = $pdo->query("
+        SELECT clave, valor FROM tb_contacto_info
+        WHERE enabled = 1
+        ORDER BY orden ASC
+    ");
+    $filas = $stmt->fetchAll();
+
+    $info = [];
+    $emails = [];
+    foreach ($filas as $fila) {
+        if (strpos($fila['clave'], 'email_') === 0) {
+            $emails[] = $fila['valor'];
+        } else {
+            $info[$fila['clave']] = $fila['valor'];
+        }
+    }
+
+    // Obtener teléfono institucional desde tb_emergencias
+    $stmt2 = $pdo->query("
+        SELECT nombre, telefono FROM tb_emergencias
+        WHERE enabled = 1 AND tipo = 'institucional'
+        LIMIT 1
+    ");
+    $alcaldia = $stmt2->fetch();
+
+    return [
+        'emails'          => $emails,
+        'telefono'        => $alcaldia['telefono'] ?? null,
+        'telefono_nombre' => $alcaldia['nombre']   ?? 'Alcaldía de Guadalupe',
+        'horario'         => $info['horario']   ?? null,
+        'direccion'       => $info['direccion'] ?? null,
+        'maps_url'        => $info['maps_url']  ?? null,
+    ];
+}

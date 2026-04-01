@@ -8,16 +8,37 @@ require_once __DIR__ . '/index.php';
 /**
  * Listar contactos de emergencia
  */
+/**
+ * Lista solo los contactos de emergencia (excluye institucionales)
+ */
 function listar_emergencias() {
     $pdo = conectarBD();
 
     $stmt = $pdo->query("
-        SELECT * FROM tb_emergencias
-        WHERE enabled = 1
-        ORDER BY nombre ASC
+        SELECT id, nombre, descripcion, telefono
+        FROM tb_emergencias
+        WHERE enabled = 1 AND tipo = 'emergencia'
+        ORDER BY id ASC
     ");
 
     return $stmt->fetchAll();
+}
+
+/**
+ * Obtiene el contacto institucional (Alcaldía) para la sección de contacto directo
+ */
+function obtener_contacto_institucional() {
+    $pdo = conectarBD();
+
+    $stmt = $pdo->query("
+        SELECT nombre, descripcion, telefono
+        FROM tb_emergencias
+        WHERE enabled = 1 AND tipo = 'institucional'
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    return $stmt->fetch();
 }
 
 /**
