@@ -98,7 +98,7 @@ switch ($action) {
         break;
 
     case 'registrar':
-        $auth = requiere_rol([ROL_COMERCIO, ROL_MODERADOR, ROL_ADMIN]);
+        $auth = requiere_auth();
 
         validar_requeridos($datos, ['nombre', 'id_categoria']);
 

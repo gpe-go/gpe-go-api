@@ -99,7 +99,7 @@ function obtener_info_contacto() {
     return [
         'emails'          => $emails,
         'telefono'        => $alcaldia['telefono'] ?? null,
-        'telefono_nombre' => $alcaldia['nombre']   ?? 'Alcaldía de Guadalupe',
+        'telefono_nombre' => $alcaldia['nombre']   ?? 'Presidencia Municipal',
         'horario'         => $info['horario']   ?? null,
         'direccion'       => $info['direccion'] ?? null,
         'maps_url'        => $info['maps_url']  ?? null,

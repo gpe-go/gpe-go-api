@@ -36,8 +36,15 @@ switch ($action) {
 
         $lugar = buscar_lugar_por_id($datos['id_lugar']);
 
-        if (!$lugar || $lugar['estado'] !== 'aprobado') {
-            responder_error('LUGAR_NO_ENCONTRADO', 'Lugar no encontrado o no aprobado', 404);
+        if (!$lugar) {
+            responder_error('LUGAR_NO_ENCONTRADO', 'Lugar no encontrado', 404);
+        }
+
+        // Permite al dueño subir fotos aunque esté pendiente; aprobado es requerido para otros
+        $es_dueno = $auth['id'] == $lugar['id_usuario'];
+        $es_moderador = in_array($auth['rol'], [ROL_MODERADOR, ROL_ADMIN]);
+        if ($lugar['estado'] !== 'aprobado' && !$es_dueno && !$es_moderador) {
+            responder_error('LUGAR_NO_APROBADO', 'Lugar no aprobado', 403);
         }
 
         $url = subir_imagen_s3($datos['imagen'], 'lugares');
