@@ -114,6 +114,7 @@ $modulos_permitidos = [
     'emergencias',
     'categorias_eventos',
     'contactos',
+    'notificaciones',
 ];
 
 // Validar módulo

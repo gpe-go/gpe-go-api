@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_usuarios.php';
+require_once __DIR__ . '/../funciones/funciones_notificaciones.php';
 
 $action = $_GET['action'] ?? '';
 $datos = $GLOBALS['INPUT_DATA'];
@@ -25,6 +26,14 @@ switch ($action) {
         ]);
 
         $usuario = buscar_usuario_por_id($id);
+
+        // Notificación de bienvenida
+        crear_notificacion(
+            $id,
+            'bienvenida',
+            '¡Bienvenido a GuadalupeGO! 👋',
+            'Explora lugares, eventos y directorio de Guadalupe, NL. ¡Que disfrutes la app!'
+        );
 
         responder(true, formatear_usuario($usuario), 'Usuario registrado correctamente', 201);
         break;

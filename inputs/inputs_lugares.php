@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_lugares.php';
 require_once __DIR__ . '/../funciones/funciones_categorias.php';
+require_once __DIR__ . '/../funciones/funciones_notificaciones.php';
 
 $action = $_GET['action'] ?? '';
 $datos = $GLOBALS['INPUT_DATA'];
@@ -166,6 +167,23 @@ switch ($action) {
         cambiar_estado_lugar($id, ESTADO_APROBADO);
 
         $lugar = buscar_lugar_por_id($id);
+
+        // Notificar al dueño
+        crear_notificacion(
+            (int)$lugar['id_usuario'],
+            'negocio_aprobado',
+            '¡Tu negocio fue aprobado! 🎉',
+            ""{$lugar['nombre']}" ya aparece en GuadalupeGO para que todos lo vean.",
+            (int)$lugar['id']
+        );
+
+        // Push broadcast: nuevo lugar publicado
+        enviar_push_broadcast(
+            'Nuevo lugar en GuadalupeGO 📍',
+            "Descubre "{$lugar['nombre']}" en el directorio.",
+            'nuevo_lugar'
+        );
+
         responder(true, $lugar, 'Lugar aprobado');
         break;
 
@@ -187,6 +205,16 @@ switch ($action) {
         cambiar_estado_lugar($id, ESTADO_RECHAZADO);
 
         $lugar = buscar_lugar_por_id($id);
+
+        // Notificar al dueño
+        crear_notificacion(
+            (int)$lugar['id_usuario'],
+            'negocio_rechazado',
+            'Tu negocio necesita ajustes',
+            ""{$lugar['nombre']}" no pudo ser aprobado en este momento. Contáctanos para más información.",
+            (int)$lugar['id']
+        );
+
         responder(true, $lugar, 'Lugar rechazado');
         break;
 

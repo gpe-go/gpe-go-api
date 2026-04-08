@@ -7,6 +7,7 @@ require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_eventos.php';
 require_once __DIR__ . '/../funciones/funciones_lugares.php';
 require_once __DIR__ . '/../funciones/funciones_categorias_eventos.php';
+require_once __DIR__ . '/../funciones/funciones_notificaciones.php';
 
 $action = $_GET['action'] ?? '';
 $datos = $GLOBALS['INPUT_DATA'];
@@ -78,6 +79,15 @@ switch ($action) {
 
         $id = crear_evento($datos);
         $evento = buscar_evento_por_id($id);
+
+        // Push broadcast a todos los usuarios
+        $tipo_push = ($datos['tipo'] ?? TIPO_EVENTO) === TIPO_NOTICIA ? 'nueva_noticia' : 'nuevo_evento';
+        $emoji     = $tipo_push === 'nueva_noticia' ? '📰' : '📅';
+        enviar_push_broadcast(
+            "Nuevo en GuadalupeGO {$emoji}",
+            $evento['titulo'] ?? 'Revisa las novedades en la app.',
+            $tipo_push
+        );
 
         responder(true, $evento, 'Evento creado correctamente', 201);
         break;
