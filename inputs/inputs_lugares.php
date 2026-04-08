@@ -168,21 +168,20 @@ switch ($action) {
 
         $lugar = buscar_lugar_por_id($id);
 
-        // Notificar al dueño
-        crear_notificacion(
-            (int)$lugar['id_usuario'],
-            'negocio_aprobado',
-            '¡Tu negocio fue aprobado! 🎉',
-            ""{$lugar['nombre']}" ya aparece en GuadalupeGO para que todos lo vean.",
-            (int)$lugar['id']
-        );
-
-        // Push broadcast: nuevo lugar publicado
-        enviar_push_broadcast(
-            'Nuevo lugar en GuadalupeGO 📍',
-            "Descubre "{$lugar['nombre']}" en el directorio.",
-            'nuevo_lugar'
-        );
+        try {
+            crear_notificacion(
+                (int)$lugar['id_usuario'],
+                'negocio_aprobado',
+                '¡Tu negocio fue aprobado! 🎉',
+                "'{$lugar['nombre']}' ya aparece en GuadalupeGO para que todos lo vean.",
+                (int)$lugar['id']
+            );
+            enviar_push_broadcast(
+                'Nuevo lugar en GuadalupeGO',
+                "Descubre '{$lugar['nombre']}' en el directorio.",
+                'nuevo_lugar'
+            );
+        } catch (Throwable $e) { /* silencioso */ }
 
         responder(true, $lugar, 'Lugar aprobado');
         break;
@@ -207,13 +206,15 @@ switch ($action) {
         $lugar = buscar_lugar_por_id($id);
 
         // Notificar al dueño
-        crear_notificacion(
-            (int)$lugar['id_usuario'],
-            'negocio_rechazado',
-            'Tu negocio necesita ajustes',
-            ""{$lugar['nombre']}" no pudo ser aprobado en este momento. Contáctanos para más información.",
-            (int)$lugar['id']
-        );
+        try {
+            crear_notificacion(
+                (int)$lugar['id_usuario'],
+                'negocio_rechazado',
+                'Tu negocio necesita ajustes',
+                "'{$lugar['nombre']}' no pudo ser aprobado en este momento. Contactanos para mas informacion.",
+                (int)$lugar['id']
+            );
+        } catch (Throwable $e) { /* silencioso */ }
 
         responder(true, $lugar, 'Lugar rechazado');
         break;

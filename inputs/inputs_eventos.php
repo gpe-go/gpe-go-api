@@ -80,14 +80,14 @@ switch ($action) {
         $id = crear_evento($datos);
         $evento = buscar_evento_por_id($id);
 
-        // Push broadcast a todos los usuarios
-        $tipo_push = ($datos['tipo'] ?? TIPO_EVENTO) === TIPO_NOTICIA ? 'nueva_noticia' : 'nuevo_evento';
-        $emoji     = $tipo_push === 'nueva_noticia' ? '📰' : '📅';
-        enviar_push_broadcast(
-            "Nuevo en GuadalupeGO {$emoji}",
-            $evento['titulo'] ?? 'Revisa las novedades en la app.',
-            $tipo_push
-        );
+        try {
+            $tipo_push = ($datos['tipo'] ?? TIPO_EVENTO) === TIPO_NOTICIA ? 'nueva_noticia' : 'nuevo_evento';
+            enviar_push_broadcast(
+                'Nuevo en GuadalupeGO',
+                $evento['titulo'] ?? 'Revisa las novedades en la app.',
+                $tipo_push
+            );
+        } catch (Throwable $e) { /* silencioso */ }
 
         responder(true, $evento, 'Evento creado correctamente', 201);
         break;

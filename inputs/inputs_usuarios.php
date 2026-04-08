@@ -27,13 +27,15 @@ switch ($action) {
 
         $usuario = buscar_usuario_por_id($id);
 
-        // Notificación de bienvenida
-        crear_notificacion(
-            $id,
-            'bienvenida',
-            '¡Bienvenido a GuadalupeGO! 👋',
-            'Explora lugares, eventos y directorio de Guadalupe, NL. ¡Que disfrutes la app!'
-        );
+        // Notificación de bienvenida (silenciosa si falla)
+        try {
+            crear_notificacion(
+                $id,
+                'bienvenida',
+                '¡Bienvenido a GuadalupeGO! 👋',
+                'Explora lugares, eventos y directorio de Guadalupe, NL. ¡Que disfrutes la app!'
+            );
+        } catch (Throwable $e) { /* no bloquear el registro */ }
 
         responder(true, formatear_usuario($usuario), 'Usuario registrado correctamente', 201);
         break;
