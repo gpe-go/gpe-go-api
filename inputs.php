@@ -115,6 +115,7 @@ $modulos_permitidos = [
     'categorias_eventos',
     'contactos',
     'notificaciones',
+    'maps',
 ];
 
 // Validar módulo

@@ -39,6 +39,10 @@ define('AWS_S3_REGION', getenv('AWS_S3_REGION') ?: 'us-east-1');
 define('AWS_ACCESS_KEY_ID', getenv('AWS_ACCESS_KEY_ID') ?: '');
 define('AWS_SECRET_ACCESS_KEY', getenv('AWS_SECRET_ACCESS_KEY') ?: '');
 
+// Constantes Google Maps (key restringida por HTTP Referrer al subdominio)
+define('GOOGLE_MAPS_API_KEY', getenv('GOOGLE_MAPS_API_KEY') ?: '');
+define('GOOGLE_MAPS_ALLOWED_ORIGIN', getenv('GOOGLE_MAPS_ALLOWED_ORIGIN') ?: '');
+
 // Roles de usuario
 define('ROL_PUBLICO', 'publico');
 define('ROL_COMERCIO', 'comercio');
