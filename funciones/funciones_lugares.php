@@ -6,48 +6,100 @@
 require_once __DIR__ . '/index.php';
 
 /**
- * Listar lugares aprobados
+ * Listar lugares aprobados.
+ *
+ * Cuando $filtros contiene lat, lng y radio_km el backend filtra
+ * con la fórmula de Haversine y devuelve solo los lugares dentro
+ * del radio indicado, ordenados por distancia ascendente.
+ *
+ * Cuando $filtros contiene busqueda se consulta toda la BD sin
+ * restricción geográfica.
  */
 function listar_lugares($filtros = [], $pagina = 1, $por_pagina = 10) {
     $pdo = conectarBD();
 
-    $where = ["l.enabled = 1", "l.estado = 'aprobado'"];
+    $where  = ["l.enabled = 1", "l.estado = 'aprobado'"];
     $params = [];
 
+    // ── Filtro por categoría ──────────────────────────────────
     if (!empty($filtros['id_categoria'])) {
-        $where[] = "l.id_categoria = ?";
+        $where[]  = "l.id_categoria = ?";
         $params[] = $filtros['id_categoria'];
     }
 
+    // ── Filtro por búsqueda de texto ──────────────────────────
     if (!empty($filtros['busqueda'])) {
-        $where[] = "(l.nombre LIKE ? OR l.descripcion LIKE ?)";
-        $busqueda = '%' . $filtros['busqueda'] . '%';
-        $params[] = $busqueda;
-        $params[] = $busqueda;
+        $where[]  = "(l.nombre LIKE ? OR l.descripcion LIKE ? OR l.direccion LIKE ?)";
+        $like     = '%' . $filtros['busqueda'] . '%';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    // ── Filtro por proximidad (Haversine) ─────────────────────
+    // Solo aplica cuando se envían lat/lng/radio_km Y no hay búsqueda de texto
+    $usar_geo = !empty($filtros['lat'])
+             && !empty($filtros['lng'])
+             && !empty($filtros['radio_km'])
+             && empty($filtros['busqueda']);
+
+    $select_extra = '';
+    $having       = '';
+
+    if ($usar_geo) {
+        $lat      = (float) $filtros['lat'];
+        $lng      = (float) $filtros['lng'];
+        $radio_km = (float) $filtros['radio_km'];
+
+        // Validación básica de coordenadas
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180 || $radio_km <= 0) {
+            $usar_geo = false;
+        } else {
+            // Lugares con coordenadas → se filtra por radio real (Haversine)
+            // Lugares SIN coordenadas → distancia = 0, siempre se incluyen
+            // (comportamiento de transición mientras se cargan las coords en la BD)
+            $select_extra = ",
+                CASE
+                    WHEN l.latitud IS NOT NULL AND l.longitud IS NOT NULL THEN
+                        (6371 * acos(
+                            LEAST(1.0, cos(radians($lat)) * cos(radians(l.latitud))
+                            * cos(radians(l.longitud) - radians($lng))
+                            + sin(radians($lat)) * sin(radians(l.latitud)))
+                        ))
+                    ELSE 0
+                END AS distancia_km";
+
+            $having = "HAVING distancia_km <= $radio_km";
+        }
     }
 
     $where_sql = implode(' AND ', $where);
-    $offset = ($pagina - 1) * $por_pagina;
+    $offset    = ($pagina - 1) * $por_pagina;
 
+    // Conteo total
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_lugares l WHERE $where_sql");
     $stmt->execute($params);
     $total = $stmt->fetchColumn();
 
+    // Ordenar por distancia si hay geo, si no por nombre
+    $order = $usar_geo ? "ORDER BY distancia_km ASC" : "ORDER BY l.nombre ASC";
+
     $stmt = $pdo->prepare("
-        SELECT l.*, c.nombre as categoria_nombre
+        SELECT l.*, c.nombre AS categoria_nombre $select_extra
         FROM tb_lugares l
         JOIN tb_categorias c ON l.id_categoria = c.id
         WHERE $where_sql
-        ORDER BY l.nombre ASC
+        $having
+        $order
         LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
     ");
     $stmt->execute($params);
 
     return [
-        'lugares' => $stmt->fetchAll(),
-        'total' => $total,
-        'pagina' => $pagina,
-        'por_pagina' => $por_pagina
+        'lugares'   => $stmt->fetchAll(),
+        'total'     => $total,
+        'pagina'    => $pagina,
+        'por_pagina'=> $por_pagina
     ];
 }
 

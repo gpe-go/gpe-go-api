@@ -5,10 +5,20 @@
 
 require_once __DIR__ . '/index.php';
 
+/**
+ * Listar eventos publicados.
+ *
+ * Cuando $filtros contiene lat, lng y radio_km el backend filtra
+ * por la ubicación del lugar asociado al evento (Haversine).
+ * Eventos sin lugar asignado se incluyen siempre (son eventos generales).
+ *
+ * Cuando $filtros contiene busqueda se consulta toda la BD sin
+ * restricción geográfica.
+ */
 function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
     $pdo = conectarBD();
 
-    $where = ["e.enabled = 1"];
+    $where  = ["e.enabled = 1"];
     $params = [];
 
     if (empty($filtros['incluir_no_publicados'])) {
@@ -16,12 +26,12 @@ function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
     }
 
     if (!empty($filtros['tipo'])) {
-        $where[] = "e.tipo = ?";
+        $where[]  = "e.tipo = ?";
         $params[] = $filtros['tipo'];
     }
 
     if (!empty($filtros['id_lugar'])) {
-        $where[] = "e.id_lugar = ?";
+        $where[]  = "e.id_lugar = ?";
         $params[] = $filtros['id_lugar'];
     }
 
@@ -30,39 +40,81 @@ function listar_eventos($filtros = [], $pagina = 1, $por_pagina = 10) {
     }
 
     if (!empty($filtros['id_categoria_evento'])) {
-        $where[] = "e.id_categoria_evento = ?";
+        $where[]  = "e.id_categoria_evento = ?";
         $params[] = $filtros['id_categoria_evento'];
     }
 
+    // ── Filtro por búsqueda de texto ──────────────────────────
     if (!empty($filtros['busqueda'])) {
-        $where[] = "(e.titulo LIKE ? OR e.descripcion LIKE ?)";
-        $busqueda = '%' . $filtros['busqueda'] . '%';
-        $params[] = $busqueda;
-        $params[] = $busqueda;
+        $where[]  = "(e.titulo LIKE ? OR e.descripcion LIKE ?)";
+        $like     = '%' . $filtros['busqueda'] . '%';
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    // ── Filtro por proximidad (Haversine via lugar del evento) ─
+    $usar_geo = !empty($filtros['lat'])
+             && !empty($filtros['lng'])
+             && !empty($filtros['radio_km'])
+             && empty($filtros['busqueda']);
+
+    $select_extra = '';
+    $having       = '';
+
+    if ($usar_geo) {
+        $lat      = (float) $filtros['lat'];
+        $lng      = (float) $filtros['lng'];
+        $radio_km = (float) $filtros['radio_km'];
+
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180 || $radio_km <= 0) {
+            $usar_geo = false;
+        } else {
+            // Distancia calculada solo cuando el evento tiene lugar con coordenadas.
+            // Eventos sin lugar (id_lugar NULL o lugar sin coords) se tratan como
+            // distancia 0 para incluirlos siempre (son eventos del municipio en general).
+            $select_extra = ",
+                CASE
+                    WHEN l.latitud IS NOT NULL AND l.longitud IS NOT NULL THEN
+                        (6371 * acos(
+                            LEAST(1.0, cos(radians($lat)) * cos(radians(l.latitud))
+                            * cos(radians(l.longitud) - radians($lng))
+                            + sin(radians($lat)) * sin(radians(l.latitud)))
+                        ))
+                    ELSE 0
+                END AS distancia_km";
+
+            $having = "HAVING distancia_km <= $radio_km";
+        }
     }
 
     $where_sql = implode(' AND ', $where);
-    $offset = ($pagina - 1) * $por_pagina;
+    $offset    = ($pagina - 1) * $por_pagina;
 
+    // Conteo
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM tb_eventos e WHERE $where_sql");
     $stmt->execute($params);
     $total = $stmt->fetchColumn();
 
+    $order = $usar_geo
+        ? "ORDER BY distancia_km ASC, e.fecha_inicio ASC"
+        : "ORDER BY e.fecha_inicio ASC";
+
     $stmt = $pdo->prepare("
-        SELECT e.*, l.nombre as lugar_nombre, ce.nombre as categoria_evento_nombre
+        SELECT e.*, l.nombre AS lugar_nombre, ce.nombre AS categoria_evento_nombre $select_extra
         FROM tb_eventos e
         LEFT JOIN tb_lugares l ON e.id_lugar = l.id
         LEFT JOIN tb_categorias_eventos ce ON e.id_categoria_evento = ce.id
         WHERE $where_sql
-        ORDER BY e.fecha_inicio ASC
+        $having
+        $order
         LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
     ");
     $stmt->execute($params);
 
     return [
-        'eventos' => $stmt->fetchAll(),
-        'total' => $total,
-        'pagina' => $pagina,
+        'eventos'    => $stmt->fetchAll(),
+        'total'      => $total,
+        'pagina'     => $pagina,
         'por_pagina' => $por_pagina
     ];
 }

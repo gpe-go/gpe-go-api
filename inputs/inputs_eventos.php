@@ -19,15 +19,19 @@ switch ($action) {
         $es_admin = $usuario_actual && in_array($usuario_actual['rol'], [ROL_MODERADOR, ROL_ADMIN]);
 
         $filtros = [
-            'tipo' => $_GET['tipo'] ?? null,
-            'id_lugar' => $_GET['id_lugar'] ?? null,
-            'id_categoria_evento' => $_GET['id_categoria_evento'] ?? null,
-            'busqueda' => $_GET['busqueda'] ?? null,
-            'incluir_pasados' => isset($_GET['incluir_pasados']),
-            'incluir_no_publicados' => $es_admin && isset($_GET['incluir_no_publicados'])
+            'tipo'                  => $_GET['tipo']                 ?? null,
+            'id_lugar'              => $_GET['id_lugar']             ?? null,
+            'id_categoria_evento'   => $_GET['id_categoria_evento']  ?? null,
+            'busqueda'              => $_GET['busqueda']             ?? null,
+            'incluir_pasados'       => isset($_GET['incluir_pasados']),
+            'incluir_no_publicados' => $es_admin && isset($_GET['incluir_no_publicados']),
+            // Parámetros de proximidad (Haversine)
+            'lat'                   => isset($_GET['lat'])      ? (float) $_GET['lat']      : null,
+            'lng'                   => isset($_GET['lng'])      ? (float) $_GET['lng']      : null,
+            'radio_km'              => isset($_GET['radio_km']) ? (float) $_GET['radio_km'] : null,
         ];
-        $pagina = (int)($_GET['pagina'] ?? 1);
-        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+        $pagina     = (int)($_GET['pagina']     ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 40);
 
         $resultado = listar_eventos($filtros, $pagina, $por_pagina);
 

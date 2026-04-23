@@ -16,10 +16,14 @@ switch ($action) {
     case 'listar':
         $filtros = [
             'id_categoria' => $_GET['id_categoria'] ?? null,
-            'busqueda' => $_GET['busqueda'] ?? null
+            'busqueda'     => $_GET['busqueda']     ?? null,
+            // Parámetros de proximidad (Haversine)
+            'lat'          => isset($_GET['lat'])      ? (float) $_GET['lat']      : null,
+            'lng'          => isset($_GET['lng'])      ? (float) $_GET['lng']      : null,
+            'radio_km'     => isset($_GET['radio_km']) ? (float) $_GET['radio_km'] : null,
         ];
-        $pagina = (int)($_GET['pagina'] ?? 1);
-        $por_pagina = (int)($_GET['por_pagina'] ?? 10);
+        $pagina     = (int)($_GET['pagina']     ?? 1);
+        $por_pagina = (int)($_GET['por_pagina'] ?? 40);
 
         $resultado = listar_lugares($filtros, $pagina, $por_pagina);
 
