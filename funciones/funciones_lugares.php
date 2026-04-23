@@ -27,6 +27,12 @@ function listar_lugares($filtros = [], $pagina = 1, $por_pagina = 10) {
         $params[] = $filtros['id_categoria'];
     }
 
+    // ── Filtro por subcategoría ───────────────────────────────
+    if (!empty($filtros['subcategoria'])) {
+        $where[]  = "l.subcategoria = ?";
+        $params[] = $filtros['subcategoria'];
+    }
+
     // ── Filtro por búsqueda de texto ──────────────────────────
     if (!empty($filtros['busqueda'])) {
         $where[]  = "(l.nombre LIKE ? OR l.descripcion LIKE ? OR l.direccion LIKE ?)";
@@ -156,16 +162,17 @@ function crear_lugar($datos, $id_usuario) {
     $pdo = conectarBD();
 
     $stmt = $pdo->prepare("
-        INSERT INTO tb_lugares (nombre, descripcion, direccion, telefono, id_categoria, id_usuario, estado)
-        VALUES (?, ?, ?, ?, ?, ?, 'pendiente')
+        INSERT INTO tb_lugares (nombre, descripcion, direccion, telefono, id_categoria, subcategoria, id_usuario, estado)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
     ");
 
     $stmt->execute([
         $datos['nombre'],
-        $datos['descripcion'] ?? null,
-        $datos['direccion'] ?? null,
-        $datos['telefono'] ?? null,
+        $datos['descripcion']  ?? null,
+        $datos['direccion']    ?? null,
+        $datos['telefono']     ?? null,
         $datos['id_categoria'],
+        $datos['subcategoria'] ?? null,
         $id_usuario
     ]);
 
@@ -181,7 +188,7 @@ function actualizar_lugar($id, $datos) {
     $campos = [];
     $valores = [];
 
-    $campos_permitidos = ['nombre', 'descripcion', 'direccion', 'telefono', 'id_categoria'];
+    $campos_permitidos = ['nombre', 'descripcion', 'direccion', 'telefono', 'id_categoria', 'subcategoria'];
 
     foreach ($campos_permitidos as $campo) {
         if (isset($datos[$campo])) {

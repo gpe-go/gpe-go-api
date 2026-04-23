@@ -16,6 +16,7 @@ switch ($action) {
     case 'listar':
         $filtros = [
             'id_categoria' => $_GET['id_categoria'] ?? null,
+            'subcategoria' => $_GET['subcategoria'] ?? null,   // ej. "Agua y Drenaje", "Gas"
             'busqueda'     => $_GET['busqueda']     ?? null,
             // Parámetros de proximidad (Haversine)
             'lat'          => isset($_GET['lat'])      ? (float) $_GET['lat']      : null,
