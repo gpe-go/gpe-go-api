@@ -12,7 +12,7 @@ $datos = $GLOBALS['INPUT_DATA'];
 switch ($action) {
 
     case 'listar':
-        $emergencias = listar_emergencias();
+        $emergencias = listar_emergencias(true);
 
         responder(true, $emergencias);
         break;

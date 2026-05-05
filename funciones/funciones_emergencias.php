@@ -11,15 +11,24 @@ require_once __DIR__ . '/index.php';
 /**
  * Lista solo los contactos de emergencia (excluye institucionales)
  */
-function listar_emergencias() {
+function listar_emergencias($incluir_todos = false) {
     $pdo = conectarBD();
 
-    $stmt = $pdo->query("
-        SELECT id, nombre, descripcion, telefono
-        FROM tb_emergencias
-        WHERE enabled = 1 AND tipo = 'emergencia'
-        ORDER BY id ASC
-    ");
+    if ($incluir_todos) {
+        $stmt = $pdo->query("
+            SELECT id, nombre, descripcion, telefono, tipo
+            FROM tb_emergencias
+            WHERE enabled = 1
+            ORDER BY tipo ASC, id ASC
+        ");
+    } else {
+        $stmt = $pdo->query("
+            SELECT id, nombre, descripcion, telefono, tipo
+            FROM tb_emergencias
+            WHERE enabled = 1 AND tipo = 'emergencia'
+            ORDER BY id ASC
+        ");
+    }
 
     return $stmt->fetchAll();
 }
@@ -62,15 +71,18 @@ function buscar_emergencia_por_id($id) {
 function crear_emergencia($datos) {
     $pdo = conectarBD();
 
+    $tipo = ($datos['tipo'] ?? 'emergencia') === 'institucional' ? 'institucional' : 'emergencia';
+
     $stmt = $pdo->prepare("
-        INSERT INTO tb_emergencias (nombre, descripcion, telefono)
-        VALUES (?, ?, ?)
+        INSERT INTO tb_emergencias (nombre, descripcion, telefono, tipo)
+        VALUES (?, ?, ?, ?)
     ");
 
     $stmt->execute([
         $datos['nombre'],
         $datos['descripcion'] ?? null,
-        $datos['telefono']
+        $datos['telefono'],
+        $tipo
     ]);
 
     return $pdo->lastInsertId();
@@ -85,10 +97,13 @@ function actualizar_emergencia($id, $datos) {
     $campos = [];
     $valores = [];
 
-    $campos_permitidos = ['nombre', 'descripcion', 'telefono'];
+    $campos_permitidos = ['nombre', 'descripcion', 'telefono', 'tipo'];
 
     foreach ($campos_permitidos as $campo) {
         if (isset($datos[$campo])) {
+            if ($campo === 'tipo' && !in_array($datos[$campo], ['emergencia', 'institucional'], true)) {
+                continue;
+            }
             $campos[] = "$campo = ?";
             $valores[] = $datos[$campo];
         }

@@ -19,11 +19,18 @@ if (file_exists($envFile)) {
 // Constantes de entorno
 define('APP_ENV', getenv('APP_ENV') ?: 'development');
 
-// BD local únicamente
-define('DB_HOST', getenv('DB_LOCAL_HOST') ?: 'localhost');
-define('DB_NAME', getenv('DB_LOCAL_NAME') ?: 'gpe_go_db');
-define('DB_USER', getenv('DB_LOCAL_USER') ?: 'root');
-define('DB_PASS', getenv('DB_LOCAL_PASS') ?: '');
+// Base de datos: en producción usa RDS, en desarrollo usa local
+if (APP_ENV === 'production') {
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+    define('DB_NAME', getenv('DB_NAME') ?: 'go');
+    define('DB_USER', getenv('DB_USER') ?: 'gpego');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+} else {
+    define('DB_HOST', getenv('DB_LOCAL_HOST') ?: 'localhost');
+    define('DB_NAME', getenv('DB_LOCAL_NAME') ?: 'gpe_go_db');
+    define('DB_USER', getenv('DB_LOCAL_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_LOCAL_PASS') ?: '');
+}
 define('DB_CHARSET', 'utf8mb4');
 
 // Constantes JWT
@@ -38,6 +45,11 @@ define('AWS_S3_BUCKET', getenv('AWS_S3_BUCKET') ?: '');
 define('AWS_S3_REGION', getenv('AWS_S3_REGION') ?: 'us-east-1');
 define('AWS_ACCESS_KEY_ID', getenv('AWS_ACCESS_KEY_ID') ?: '');
 define('AWS_SECRET_ACCESS_KEY', getenv('AWS_SECRET_ACCESS_KEY') ?: '');
+
+// Constantes AWS SES (correo)
+define('AWS_SES_KEY', getenv('AWS_SES_KEY') ?: '');
+define('AWS_SES_SECRET', getenv('AWS_SES_SECRET') ?: '');
+define('AWS_SES_REGION', getenv('AWS_SES_REGION') ?: 'us-east-1');
 
 // Roles de usuario
 define('ROL_PUBLICO', 'publico');
