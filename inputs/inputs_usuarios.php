@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_usuarios.php';
 require_once __DIR__ . '/../funciones/funciones_notificaciones.php';
+require_once __DIR__ . '/../funciones/funciones_email.php';
 
 $action = $_GET['action'] ?? '';
 $datos = $GLOBALS['INPUT_DATA'];
@@ -35,6 +36,7 @@ switch ($action) {
                 '¡Bienvenido a GuadalupeGO! 👋',
                 'Explora lugares, eventos y directorio de Guadalupe, NL. ¡Que disfrutes la app!'
             );
+            enviar_email_bienvenida($datos['email'], $datos['nombre']);
         } catch (Throwable $e) { /* no bloquear el registro */ }
 
         responder(true, formatear_usuario($usuario), 'Usuario registrado correctamente', 201);
@@ -81,10 +83,15 @@ switch ($action) {
         $codigo = generar_codigo();
         guardar_codigo_verificacion($usuario['id'], $codigo);
 
-        // TODO: Implementar envío de email
-        // Por ahora, en desarrollo, retornamos el código
+        $email_real = desencriptar_email($usuario['email']);
+        $enviado = enviar_codigo_verificacion($email_real, $codigo);
+
         if (APP_ENV === 'development') {
             responder(true, ['codigo' => $codigo], 'Código generado (modo desarrollo)');
+        }
+
+        if (!$enviado) {
+            responder_error('EMAIL_ERROR', 'No se pudo enviar el código por email', 500);
         }
 
         responder(true, null, 'Código enviado a tu email');

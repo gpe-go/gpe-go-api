@@ -2,11 +2,19 @@
 /**
  * Funciones para el módulo de usuarios
  *
- * Esquema real de tb_usuarios:
- *   id, nombre, email, password, codigo_expira, rol (enum), enabled
+ * Esquema RDS tb_usuarios:
+ *   id, nombre, email, password, codigo_expira, id_rol (FK→tb_roles), enabled
  */
 
 require_once __DIR__ . '/index.php';
+
+function obtener_id_rol($nombre_rol) {
+    $pdo = conectarBD();
+    $stmt = $pdo->prepare("SELECT id FROM tb_roles WHERE nombre_rol = ?");
+    $stmt->execute([$nombre_rol]);
+    $row = $stmt->fetch();
+    return $row ? (int)$row['id'] : null;
+}
 
 /**
  * Buscar usuario por email (encriptado)
@@ -16,8 +24,10 @@ function buscar_usuario_por_email($email) {
     $email_encriptado = encriptar_email($email);
 
     $stmt = $pdo->prepare("
-        SELECT * FROM tb_usuarios
-        WHERE email = ? AND enabled = 1
+        SELECT u.*, r.nombre_rol AS rol
+        FROM tb_usuarios u
+        LEFT JOIN tb_roles r ON u.id_rol = r.id
+        WHERE u.email = ? AND u.enabled = 1
     ");
     $stmt->execute([$email_encriptado]);
 
@@ -31,8 +41,10 @@ function buscar_usuario_por_id($id) {
     $pdo = conectarBD();
 
     $stmt = $pdo->prepare("
-        SELECT * FROM tb_usuarios
-        WHERE id = ? AND enabled = 1
+        SELECT u.*, r.nombre_rol AS rol
+        FROM tb_usuarios u
+        LEFT JOIN tb_roles r ON u.id_rol = r.id
+        WHERE u.id = ? AND u.enabled = 1
     ");
     $stmt->execute([$id]);
 
@@ -46,23 +58,27 @@ function crear_usuario($datos) {
     $pdo = conectarBD();
 
     $email_encriptado = encriptar_email($datos['email']);
-    $rol = $datos['rol'] ?? ROL_PUBLICO;
+    $rol_nombre = $datos['rol'] ?? ROL_PUBLICO;
+    $id_rol = obtener_id_rol($rol_nombre);
 
-    // Verificar si ya existe
+    if (!$id_rol) {
+        responder_error('ROL_INVALIDO', 'El rol especificado no existe', 400);
+    }
+
     $existente = buscar_usuario_por_email($datos['email']);
     if ($existente) {
         responder_error('EMAIL_EXISTENTE', 'Ya existe un usuario con este email', 400);
     }
 
     $stmt = $pdo->prepare("
-        INSERT INTO tb_usuarios (nombre, email, rol)
+        INSERT INTO tb_usuarios (nombre, email, id_rol)
         VALUES (?, ?, ?)
     ");
 
     $stmt->execute([
         $datos['nombre'],
         $email_encriptado,
-        $rol
+        $id_rol
     ]);
 
     return $pdo->lastInsertId();
@@ -135,8 +151,11 @@ function actualizar_usuario($id, $datos) {
     }
 
     if (isset($datos['rol'])) {
-        $campos[] = "rol = ?";
-        $valores[] = $datos['rol'];
+        $id_rol = obtener_id_rol($datos['rol']);
+        if ($id_rol) {
+            $campos[] = "id_rol = ?";
+            $valores[] = $id_rol;
+        }
     }
 
     if (empty($campos)) {
@@ -165,10 +184,11 @@ function listar_usuarios($pagina = 1, $por_pagina = 10) {
 
     // Obtener usuarios
     $stmt = $pdo->prepare("
-        SELECT id, nombre, email, rol
-        FROM tb_usuarios
-        WHERE enabled = 1
-        ORDER BY id DESC
+        SELECT u.id, u.nombre, u.email, r.nombre_rol AS rol
+        FROM tb_usuarios u
+        LEFT JOIN tb_roles r ON u.id_rol = r.id
+        WHERE u.enabled = 1
+        ORDER BY u.id DESC
         LIMIT " . (int)$por_pagina . " OFFSET " . (int)$offset . "
     ");
     $stmt->execute();
