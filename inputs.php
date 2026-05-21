@@ -27,15 +27,15 @@ function detectar_sql_injection($valor) {
     }
 
     $patrones_peligrosos = [
-        '/\bINSERT\b/i',
-        '/\bUPDATE\b/i',
-        '/\bDELETE\b/i',
-        '/\bDROP\b/i',
-        '/\bTRUNCATE\b/i',
-        '/\bALTER\b/i',
-        '/\bCREATE\b/i',
-        '/\bEXEC\b/i',
-        '/\bUNION\b/i',
+        '/\bINSERT\s+INTO\b/i',
+        '/\bUPDATE\s+\w+\s+SET\b/i',
+        '/\bDELETE\s+FROM\b/i',
+        '/\bDROP\s+(TABLE|DATABASE|INDEX)\b/i',
+        '/\bTRUNCATE\s+TABLE\b/i',
+        '/\bALTER\s+TABLE\b/i',
+        '/\bCREATE\s+(TABLE|DATABASE|INDEX)\b/i',
+        '/\bEXEC(\s*\(|\s+)/i',
+        '/\bUNION\s+(ALL\s+)?SELECT\b/i',
         '/\bSELECT\b.*\bFROM\b/i',
         '/--/',
         '/;.*\b(DROP|DELETE|INSERT|UPDATE)\b/i'

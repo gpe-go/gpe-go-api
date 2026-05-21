@@ -5,7 +5,6 @@
 
 require_once __DIR__ . '/../bouncer.php';
 require_once __DIR__ . '/../funciones/funciones_eventos.php';
-require_once __DIR__ . '/../funciones/funciones_lugares.php';
 require_once __DIR__ . '/../funciones/funciones_categorias_eventos.php';
 require_once __DIR__ . '/../funciones/funciones_notificaciones.php';
 
@@ -20,15 +19,10 @@ switch ($action) {
 
         $filtros = [
             'tipo'                  => $_GET['tipo']                 ?? null,
-            'id_lugar'              => $_GET['id_lugar']             ?? null,
             'id_categoria_evento'   => $_GET['id_categoria_evento']  ?? null,
             'busqueda'              => $_GET['busqueda']             ?? null,
             'incluir_pasados'       => isset($_GET['incluir_pasados']),
             'incluir_no_publicados' => $es_admin && isset($_GET['incluir_no_publicados']),
-            // Parámetros de proximidad (Haversine)
-            'lat'                   => isset($_GET['lat'])      ? (float) $_GET['lat']      : null,
-            'lng'                   => isset($_GET['lng'])      ? (float) $_GET['lng']      : null,
-            'radio_km'              => isset($_GET['radio_km']) ? (float) $_GET['radio_km'] : null,
         ];
         $pagina     = (int)($_GET['pagina']     ?? 1);
         $por_pagina = (int)($_GET['por_pagina'] ?? 40);
@@ -59,15 +53,24 @@ switch ($action) {
 
         validar_requeridos($datos, ['titulo', 'fecha_inicio']);
 
-        if (isset($datos['tipo']) && !in_array($datos['tipo'], [TIPO_EVENTO, TIPO_NOTICIA])) {
-            responder_error('TIPO_INVALIDO', 'El tipo debe ser "evento" o "noticia"', 400);
+        if (mb_strlen($datos['titulo']) > 200) {
+            responder_error('TITULO_MUY_LARGO', 'El título no puede exceder 200 caracteres', 400);
         }
 
-        if (!empty($datos['id_lugar'])) {
-            $lugar = buscar_lugar_por_id($datos['id_lugar']);
-            if (!$lugar) {
-                responder_error('LUGAR_NO_ENCONTRADO', 'El lugar especificado no existe', 400);
-            }
+        if (strtotime($datos['fecha_inicio']) === false) {
+            responder_error('FECHA_INICIO_INVALIDA', 'El formato de fecha_inicio no es válido (use YYYY-MM-DD)', 400);
+        }
+
+        if (!empty($datos['fecha_fin']) && strtotime($datos['fecha_fin']) === false) {
+            responder_error('FECHA_FIN_INVALIDA', 'El formato de fecha_fin no es válido (use YYYY-MM-DD)', 400);
+        }
+
+        if (isset($datos['publicado'])) {
+            $datos['publicado'] = (int) $datos['publicado'] ? 1 : 0;
+        }
+
+        if (isset($datos['tipo']) && !in_array($datos['tipo'], [TIPO_EVENTO, TIPO_NOTICIA])) {
+            responder_error('TIPO_INVALIDO', 'El tipo debe ser "evento" o "noticia"', 400);
         }
 
         if (!empty($datos['id_categoria_evento'])) {
@@ -113,13 +116,6 @@ switch ($action) {
 
         if (isset($datos['tipo']) && !in_array($datos['tipo'], [TIPO_EVENTO, TIPO_NOTICIA])) {
             responder_error('TIPO_INVALIDO', 'El tipo debe ser "evento" o "noticia"', 400);
-        }
-
-        if (isset($datos['id_lugar']) && $datos['id_lugar'] !== null) {
-            $lugar = buscar_lugar_por_id($datos['id_lugar']);
-            if (!$lugar) {
-                responder_error('LUGAR_NO_ENCONTRADO', 'El lugar especificado no existe', 400);
-            }
         }
 
         if (!empty($datos['id_categoria_evento'])) {
